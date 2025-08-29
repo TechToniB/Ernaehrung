@@ -4,10 +4,14 @@ from tkinter import ttk, messagebox
 from pathlib import Path
 import re
 
+# Globale Variablen für die geladene Tabelle und die Eingabefelder
 df_global = None
 eintrag_widgets = []
 
 def lade_und_zeige_tabelle(dateipfad):
+    """
+    Lädt die Excel-Tabelle und zeigt sie im Fenster an.
+    """
     global df_global
     try:
         df_global = pd.read_excel(dateipfad)
@@ -16,7 +20,12 @@ def lade_und_zeige_tabelle(dateipfad):
         messagebox.showerror("Fehler", f"Die Datei konnte nicht geladen werden:\n{e}")
 
 def zeige_tabelle():
+    """
+    Zeigt die Tabelle in drei nebeneinanderliegenden Teilen an,
+    jeweils mit Eingabefeldern für eigene Werte.
+    """
     global eintrag_widgets
+    # Vorherige Inhalte löschen
     for widget in frame_tabellen.winfo_children():
         widget.destroy()
     eintrag_widgets.clear()
@@ -24,8 +33,9 @@ def zeige_tabelle():
         return
 
     n = len(df_global)
-    drittel = (n + 2) // 3  # Aufrunden, damit alles abgedeckt ist
+    drittel = (n + 2) // 3  # Aufrunden, damit alle Zeilen abgedeckt sind
 
+    # Tabelle in drei Teile aufteilen
     teile = [
         df_global.iloc[0:drittel],
         df_global.iloc[drittel:2*drittel],
@@ -33,36 +43,48 @@ def zeige_tabelle():
     ]
 
     frames = []
+    # Drei Frames nebeneinander für die drei Teile
     for i in range(3):
         f = tk.Frame(frame_tabellen, borderwidth=2, relief="groove")
         f.grid(row=0, column=i, padx=5, pady=5, sticky="n")
         frames.append(f)
 
+    # Jeden Teil in einem eigenen Frame anzeigen
     for teil_idx, teil in enumerate(teile):
         # Spaltenüberschriften
         for i, col in enumerate(teil.columns):
             tk.Label(frames[teil_idx], text=col, relief="ridge", bg="#e0e0e0").grid(row=0, column=i, sticky="nsew")
         tk.Label(frames[teil_idx], text="Dein Wert", relief="ridge", bg="#e0e0e0").grid(row=0, column=len(teil.columns), sticky="nsew")
-        # Zeilen
+        # Zeilen mit Daten und Eingabefeld
         for row_idx, row in enumerate(teil.itertuples(index=False), 1):
             for col_idx, value in enumerate(row):
                 tk.Label(frames[teil_idx], text=str(value), relief="ridge").grid(row=row_idx, column=col_idx, sticky="nsew")
+            # Eingabefeld für eigenen Wert
             eintrag = tk.Entry(frames[teil_idx], width=10)
             eintrag.grid(row=row_idx, column=len(teil.columns), sticky="nsew")
             eintrag_widgets.append(eintrag)
 
 def tabelle_ausgewaehlt(event):
+    """
+    Wird aufgerufen, wenn eine Tabelle aus der Combobox ausgewählt wurde.
+    """
     auswahl = combo_tabellen.get()
     if auswahl:
         dateipfad = filter_ordner / auswahl
         lade_und_zeige_tabelle(dateipfad)
 
 def pruefe_werte():
+    """
+    Prüft die eingetragenen Werte gegen die Referenzwerte und zeigt das Ergebnis an.
+    Die Toleranz hängt von der Kategorie ab.
+    """
     if df_global is None:
         return
     ergebnisse = []
+    # Alle Zeilen der Tabelle durchgehen
     for idx, (i, row) in enumerate(df_global.iterrows()):
         try:
+            # Nur die erste Zahl aus dem Referenzwert extrahieren
             ref_str = str(row['Referenzwert'])
             match = re.search(r"[-+]?\d*\.?\d+", ref_str)
             if not match:
@@ -74,10 +96,12 @@ def pruefe_werte():
                 ergebnisse.append("Kein Wert")
                 continue
             wert = float(eintrag)
+            # Kategorie und Nährstoff bestimmen
             kategorie = str(row.get('Kategorie', '')).strip().lower()
             naehrstoff = str(row.get('Nährstoff', '')).strip().lower()
+            # Toleranz je nach Kategorie bestimmen
             if kategorie == "richtwert":
-                tol = 0.01
+                tol = 0.01  # 1%
                 if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
@@ -85,7 +109,7 @@ def pruefe_werte():
                 else:
                     ergebnisse.append("Zu hoch")
             elif kategorie == "schätzwert":
-                tol = 0.05
+                tol = 0.05  # 5%
                 if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
@@ -93,13 +117,14 @@ def pruefe_werte():
                 else:
                     ergebnisse.append("Zu hoch")
             elif kategorie == "empfohlene zufuhr":
+                # Für gesättigte Fettsäuren nur nach unten Toleranz
                 if "gesättigte fettsäuren" in naehrstoff:
                     if wert <= referenz:
                         ergebnisse.append("Im Rahmen")
                     else:
                         ergebnisse.append("Zu hoch")
                 else:
-                    tol = 0.10
+                    tol = 0.10  # 10%
                     if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
                         ergebnisse.append("Im Rahmen")
                     elif wert < referenz * (1 - tol):
@@ -107,7 +132,8 @@ def pruefe_werte():
                     else:
                         ergebnisse.append("Zu hoch")
             else:
-                tol = 0.05
+                # Standard: 1% Toleranz
+                tol = 0.01
                 if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
@@ -116,7 +142,7 @@ def pruefe_werte():
                     ergebnisse.append("Zu hoch")
         except Exception:
             ergebnisse.append("Ungültig")
-    # Ergebnisse anzeigen
+    # Ergebnisse in den jeweiligen Frames anzeigen
     idx = 0
     n = len(df_global)
     drittel = (n + 2) // 3
