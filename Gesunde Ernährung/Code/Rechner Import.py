@@ -5,8 +5,8 @@ from pathlib import Path
 import re
 
 # Globale Variablen für die geladene Tabelle und die Eingabefelder
-df_global = None
-eintrag_widgets = []
+df_global = None           # Hier wird das aktuell geladene DataFrame gespeichert
+eintrag_widgets = []       # Liste für alle Eingabefelder (Entry-Widgets)
 
 def lade_und_zeige_tabelle(dateipfad):
     """
@@ -14,8 +14,8 @@ def lade_und_zeige_tabelle(dateipfad):
     """
     global df_global
     try:
-        df_global = pd.read_excel(dateipfad)
-        zeige_tabelle()
+        df_global = pd.read_excel(dateipfad)  # Excel-Datei laden
+        zeige_tabelle()                       # Tabelle im GUI anzeigen
     except Exception as e:
         messagebox.showerror("Fehler", f"Die Datei konnte nicht geladen werden:\n{e}")
 
@@ -33,7 +33,7 @@ def zeige_tabelle():
         return
 
     n = len(df_global)
-    drittel = (n + 2) // 3  # Aufrunden, damit alle Zeilen abgedeckt sind
+    drittel = (n + 2) // 3  # Tabelle in 3 etwa gleich große Teile aufteilen
 
     # Tabelle in drei Teile aufteilen
     teile = [
@@ -84,7 +84,7 @@ def pruefe_werte():
     # Alle Zeilen der Tabelle durchgehen
     for idx, (i, row) in enumerate(df_global.iterrows()):
         try:
-            # Nur die erste Zahl aus dem Referenzwert extrahieren
+            # Nur die erste Zahl aus dem Referenzwert extrahieren (z.B. "12 mg" -> 12)
             ref_str = str(row['Referenzwert'])
             match = re.search(r"[-+]?\d*\.?\d+", ref_str)
             if not match:
@@ -153,7 +153,7 @@ def pruefe_werte():
             tk.Label(frame, text=ergebnisse[idx], relief="ridge", bg="#f0f0f0").grid(row=row, column=len(df_global.columns)+1, sticky="nsew")
             idx += 1
 
-# Filter-Ordner festlegen
+# Filter-Ordner festlegen (hier werden die Excel-Dateien gesucht)
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx")]
 
