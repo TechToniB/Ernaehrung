@@ -39,8 +39,27 @@ ziel_kategorien = [
 
 if 'Kategorie_gesamt' in df.columns:
     filtered_df = df[df['Kategorie_gesamt'].isin(ziel_kategorien)]
-    filtered_df.to_excel("Gesunde Ernährung/Quellen/Nährstoffe in X/lebensmittel-naehrstoffe.de/Vegan Gefilterte Kategorien.xlsx", index=False)
-    print("Gefilterte Tabelle wurde als 'Gesunde Ernährung/Quellen/Nährstoffe in X/lebensmittel-naehrstoffe.de/Vegan Gefilterte Kategorien.xlsx' gespeichert.")
+    output_path = "Gesunde Ernährung/Quellen/Nährstoffe in X/lebensmittel-naehrstoffe.de/Gefilterte_Kategorien.xlsx"
+    filtered_df.to_excel(output_path, index=False)
+
+    # Spaltenbreiten anpassen
+    from openpyxl import load_workbook
+    wb = load_workbook(output_path)
+    ws = wb.active
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter  # Get the column name
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = max_length + 2
+        ws.column_dimensions[column].width = adjusted_width
+    wb.save(output_path)
+
+    print(f"Gefilterte Tabelle wurde als '{output_path}' gespeichert und die Spaltenbreiten angepasst.")
 else:
     print("Die Spalte 'Kategorie_gesamt' wurde nicht gefunden.")
 # Algen
