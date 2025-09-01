@@ -5,3 +5,6 @@ https://www.edeka.de/ernaehrung/lebensmittelwissen/saisonkalender-obst-gemuese/i
 
 ### Links von NININ
 https://www.dge.de/wissenschaft/referenzwerte/
+
+### Lebensmitteltabellen
+https://lebensmittel-naehrstoffe.de/
