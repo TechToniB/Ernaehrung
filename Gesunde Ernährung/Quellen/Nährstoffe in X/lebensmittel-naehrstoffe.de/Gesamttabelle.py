@@ -1,2 +1,0 @@
-#kannst du alle Excel Tabellen in dem "lebensmittel-naehrstoffe.de" Ordner zu einer Gesamttabelle Zusamenfassen so das wenn in der Spalte "Lebensmittel" das selbe steht die werte aus den anderen Tabellen in der gleichen Zeile aufgelistet werden? 
-import pandas as pd
