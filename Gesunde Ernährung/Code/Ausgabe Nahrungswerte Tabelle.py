@@ -1,3 +1,79 @@
+from tkinter import filedialog
+# Funktion zum Speichern der Ergebnisse in eine Datei
+def speichere_ergebnisse():
+	auswahl = combo.get()
+	menge_str = menge_var.get()
+	try:
+		menge = float(menge_str.replace(',', '.'))
+		if menge <= 0:
+			raise ValueError
+	except Exception:
+		messagebox.showinfo('Hinweis', 'Bitte eine gültige Menge eingeben.')
+		return
+	if not auswahl:
+		messagebox.showinfo('Hinweis', 'Bitte ein Lebensmittel auswählen.')
+		return
+	zeile = df[df['Lebensmittel'] == auswahl]
+	if zeile.empty:
+		messagebox.showinfo('Hinweis', 'Keine Daten gefunden.')
+		return
+	spalten = df.columns[2:]
+	werte_liste = []
+	for spalte in spalten:
+		wert = zeile.iloc[0][spalte]
+		if pd.notna(wert):
+			try:
+				if isinstance(wert, (int, float)) and not isinstance(wert, bool):
+					werte_liste.append((spalte, float(wert)))
+				else:
+					float_wert = float(str(wert).replace(',', '.'))
+					werte_liste.append((spalte, float_wert))
+			except (ValueError, TypeError):
+				continue
+	if not werte_liste:
+		messagebox.showinfo('Hinweis', 'Keine Nährstoffdaten vorhanden.')
+		return
+	# Dopplungen filtern wie in der Anzeige
+	import re
+	filtered = []
+	werte_dict = {}
+	for spalte, wert in werte_liste:
+		if pd.isna(wert):
+			continue
+		wert_str = str(wert)
+		if wert_str not in werte_dict:
+			werte_dict[wert_str] = [spalte]
+		else:
+			werte_dict[wert_str].append(spalte)
+	for wert_str, spalten_namen in werte_dict.items():
+		kuerzester = min(spalten_namen, key=len)
+		filtered.append((kuerzester, float(wert_str)))
+	# Nur Spalte 3 (berechneter Wert für Menge) speichern
+	ergebnis_liste = []
+	for spalte, wert in filtered:
+		berechnet = wert / 100 * menge
+		ergebnis_liste.append(f"{spalte}: {berechnet:.2f}")
+	if not ergebnis_liste:
+		messagebox.showinfo('Hinweis', 'Keine berechneten Werte zum Speichern.')
+		return
+	# Dialog zum Auswählen des Speicherorts
+	default_filename = f"Naehrwerte_{auswahl.replace(' ', '_')}_{int(menge)}g.txt"
+	save_path = filedialog.asksaveasfilename(
+		defaultextension='.txt',
+		filetypes=[('Textdateien', '*.txt'), ('Alle Dateien', '*.*')],
+		initialfile=default_filename,
+		title='Speicherort für Ergebnisse wählen'
+	)
+	if not save_path:
+		return
+	try:
+		with open(save_path, 'w', encoding='utf-8') as f:
+			f.write(f"Nährwerte für {auswahl} ({menge}g):\n\n")
+			for line in ergebnis_liste:
+				f.write(line + '\n')
+		messagebox.showinfo('Gespeichert', f'Ergebnisse gespeichert unter:\n{save_path}')
+	except Exception as e:
+		messagebox.showerror('Fehler', f'Fehler beim Speichern:\n{e}')
 
 
 import pandas as pd
@@ -33,7 +109,7 @@ root = tk.Tk()
 root.title('Nährstoffanzeige')
 
 # Fenstergröße anpassen
-root.geometry('700x500')
+root.geometry('800x550')
 
 # Layout: Dropdown und Mengeneingabe nebeneinander
 frame_top = ttk.Frame(root)
@@ -127,9 +203,14 @@ def zeige_naehrstoffe():
 		textfeld.insert(tk.END, 'Keine Nährstoffdaten vorhanden.')
 		textfeld.config(state='disabled')
 
-# Button nach Funktionsdefinition
-btn = ttk.Button(root, text='Nährstoffe anzeigen', command=zeige_naehrstoffe)
-btn.pack(padx=10, pady=5)
+
+# Buttons nebeneinander in einem Frame
+frame_buttons = ttk.Frame(root)
+frame_buttons.pack(padx=10, pady=5)
+btn = ttk.Button(frame_buttons, text='Nährstoffe anzeigen', command=zeige_naehrstoffe)
+btn.pack(side='left', padx=(0, 10))
+btn_save = ttk.Button(frame_buttons, text='Ergebnisse speichern', command=speichere_ergebnisse)
+btn_save.pack(side='left')
 
 root.mainloop()
 
