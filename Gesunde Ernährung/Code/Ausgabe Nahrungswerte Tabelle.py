@@ -110,12 +110,12 @@ def zeige_naehrstoffe():
 			max_wert = max(len(f"{s[1]:.2f}") for s in filtered)
 			max_berechnet = max(len(f"{s[1]/100*menge:.2f}") for s in filtered)
 			sep = '   '  # Mehr Abstand zwischen den Spalten
-			header = f"{'Nährstoff'.ljust(max_spaltenname)}{sep}{sep}{'pro 100g'.rjust(max_wert)}{sep}{sep}{'für Menge'.rjust(max_berechnet)}"
+			header = f"{'Nährstoff'.ljust(max_spaltenname)}{sep}{'pro 100g'.rjust(max_wert)}{sep}{'für Menge'.rjust(max_berechnet)}"
 			infos.append(header)
 			infos.append('-' * len(header))
 			for spalte, wert in filtered:
 				berechnet = wert / 100 * menge
-				infos.append(f"{spalte.ljust(max_spaltenname)}{sep}{f'{wert:.2f}'.rjust(max_wert)}{sep}{f'{berechnet:.2f}'.rjust(max_berechnet)}")
+				infos.append(f"{spalte.ljust(max_spaltenname)}{sep}{f'{wert:.2f}'.rjust(max_wert)}{sep}{sep}{f'{berechnet:.2f}'.rjust(max_berechnet)}")
 	if infos:
 		textfeld.config(state='normal')
 		textfeld.delete('1.0', tk.END)
