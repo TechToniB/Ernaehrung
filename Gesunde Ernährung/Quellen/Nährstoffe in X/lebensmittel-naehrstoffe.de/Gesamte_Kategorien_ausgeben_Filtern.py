@@ -40,7 +40,6 @@ ziel_kategorien = [
 if 'Kategorie_gesamt' in df.columns:
     filtered_df = df[df['Kategorie_gesamt'].isin(ziel_kategorien)]
     output_path = "Gesunde Ernährung/Quellen/Nährstoffe in X/lebensmittel-naehrstoffe.de/Gefilterte_Kategorien.xlsx"
-    filtered_df.to_excel(output_path, index=False)
 
     # Spaltenbreiten anpassen
     from openpyxl import load_workbook
