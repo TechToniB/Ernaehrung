@@ -59,9 +59,17 @@ if 'Kategorie_gesamt' in df.columns:
         ws.column_dimensions[column].width = adjusted_width
     wb.save(output_path)
 
+    # Kategorien, die nicht aufgenommen wurden, ausgeben
+    alle_kategorien = set(df['Kategorie_gesamt'].dropna())
+    nicht_aufgenommen = alle_kategorien - set(ziel_kategorien)
     print(f"Gefilterte Tabelle wurde als '{output_path}' gespeichert und die Spaltenbreiten angepasst.")
+    print("\nKategorien, die NICHT aufgenommen wurden:")
+    for k in sorted(nicht_aufgenommen):
+        print(k)
 else:
     print("Die Spalte 'Kategorie_gesamt' wurde nicht gefunden.")
+
+# Alle Kategorien
 # Algen
 # Brot, Brötchen, Brotwaren
 # Chips, gesalzene Snacks
@@ -104,3 +112,20 @@ else:
 # Süssspeisen, süsse Brotaufstriche, Pudding
 # Wild, weitere Tierarten
 # Öle
+
+# Nicht aufgenommene Kategorien
+# Eier
+# Fisch, Meeresfische
+# Fleisch und Innereien
+# Fleischwaren, Wurstwaren
+# Frischkäse und Quark
+# Kalb
+# Käse
+# Milch, Milchprodukte
+# Muscheln, Garnelen, Weichtiere und Meeresfrüchte
+# Rind
+# Saucen, Würzmittel
+# Schaf, Lamm
+# Schwein
+# Säfte, Obstsäfte, Gemüsesäfte, Nektar
+# Wild, weitere Tierarten
