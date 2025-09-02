@@ -14,8 +14,6 @@ except ImportError:
 	win32gui = None
 	win32con = None
 
-
-
 def bring_window_to_front(window_title):
 	if win32gui is None:
 		return False
@@ -160,8 +158,6 @@ def main():
 				print(f"[ERROR] Button '{text}' konnte nicht erzeugt werden: {e}")
 
 	root.mainloop()
-
-
 
 # Nur main() und Aufruf am Ende sollen übrig bleiben
 
