@@ -168,13 +168,22 @@ def speichere_ergebnisse():
 		messagebox.showerror('Fehler', f'Fehler beim Speichern:\n{e}')
 
 
+
 import pandas as pd
 import os
+import sys
+import argparse
 import tkinter as tk
 from tkinter import messagebox
-import sys
-# Importiere ttkbootstrap (nur für Theme, nicht für Combobox)
 import ttkbootstrap as tb
+
+# Dark mode support
+def get_theme():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--dark', action='store_true')
+	args, _ = parser.parse_known_args()
+	return "darkly" if args.dark else "flatly"
+
 
 
 # Excel-Datei laden mit Fehlerbehandlung
@@ -201,8 +210,9 @@ except Exception as e:
 	messagebox.showerror('Fehler', f'Keine Lebensmittel gefunden:\n{e}')
 	sys.exit(1)
 
+
 # --- GUI erstellen ---
-root = tb.Window(themename="flatly")
+root = tb.Window(themename=get_theme())
 root.title('Nährstoffanzeige')
 # Fenstergröße anpassen
 root.geometry('800x550')

@@ -1,8 +1,19 @@
+
 import pandas as pd
+import sys
+import argparse
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 import re
+import ttkbootstrap as tb
+
+# Dark mode support
+def get_theme():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dark', action='store_true')
+    args, _ = parser.parse_known_args()
+    return "darkly" if args.dark else "flatly"
 
 # Globale Variablen für die geladene Tabelle und die Eingabefelder
 df_global = None           # Hier wird das aktuell geladene DataFrame gespeichert
@@ -157,8 +168,9 @@ def pruefe_werte():
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx")]
 
+
 # Fenster erstellen
-root = tk.Tk()
+root = tb.Window(themename=get_theme())
 root.title("Tabellen-Auswahl")
 
 # Auswahlfeld für Tabellen
