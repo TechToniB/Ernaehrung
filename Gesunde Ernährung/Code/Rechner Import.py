@@ -103,8 +103,8 @@ def pruefe_werte():
         return
     ergebnisse = []
     # Farben für die Einfärbung
-    COLOR_OK = '#b6fcb6'   # Hellgrün
-    COLOR_FAIL = '#ffb3b3' # Hellrot
+    COLOR_OK = "#067a06"   # Dunkelgrün
+    COLOR_FAIL = "#d81212" # Dunkelrot
     # Alle Zeilen der Tabelle durchgehen
     for idx, (_, row) in enumerate(df_global.iterrows()):
         try:
