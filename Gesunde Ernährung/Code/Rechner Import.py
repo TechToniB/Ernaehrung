@@ -229,10 +229,14 @@ btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
 def zurueck_zum_hauptmenue():
     root.destroy()
 
-# Hauptmenü-Button unten rechts
+
+# Grid so konfigurieren, dass die letzte Zeile/Spalte flexibel ist
+root.grid_rowconfigure(100, weight=1)
+root.grid_columnconfigure(2, weight=1)
+# Hauptmenü-Button ganz unten rechts
 frame_hauptmenue = tk.Frame(root)
-frame_hauptmenue.grid(row=3, column=0, columnspan=2, sticky="se", padx=10, pady=10)
-btn_hauptmenue = tk.Button(frame_hauptmenue, text="Hauptmenü", command=zurueck_zum_hauptmenue)
-btn_hauptmenue.pack(anchor="se")
+frame_hauptmenue.grid(row=100, column=2, sticky="se", padx=10, pady=10)
+btn_hauptmenue = tb.Button(frame_hauptmenue, text="Hauptmenü", command=zurueck_zum_hauptmenue)
+btn_hauptmenue.pack(anchor='e', side='right')
 
 root.mainloop()
