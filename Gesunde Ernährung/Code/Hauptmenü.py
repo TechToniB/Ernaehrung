@@ -1,4 +1,5 @@
 
+
 import tkinter as tk
 import subprocess
 import os
@@ -6,12 +7,36 @@ import sys
 import psutil
 import json
 import ttkbootstrap as tb
+try:
+	import win32gui
+	import win32con
+except ImportError:
+	win32gui = None
+	win32con = None
 
 
-def open_script(script_name):
+
+def bring_window_to_front(window_title):
+	if win32gui is None:
+		return False
+	found = False
+	def enumHandler(hwnd, lParam):
+		nonlocal found
+		if win32gui.IsWindowVisible(hwnd):
+			if window_title in win32gui.GetWindowText(hwnd):
+				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+				win32gui.SetForegroundWindow(hwnd)
+				found = True
+	win32gui.EnumWindows(enumHandler, None)
+	return found
+
+def open_script(script_name, window_title=None):
 	# Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
 	script_path = os.path.join(os.path.dirname(__file__), script_name)
-	# Prüfen, ob das Skript bereits läuft
+	# Prüfen, ob das Fenster schon existiert und ggf. wiederherstellen
+	if window_title and bring_window_to_front(window_title):
+		return
+	# Prüfen, ob das Skript bereits läuft (Prozess)
 	for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
 		try:
 			cmdline = proc.info['cmdline']
@@ -69,13 +94,16 @@ def main():
 	btn_style = "darkly.TButton" if dark_mode else "TButton"
 
 	# Button für Rechner Import
+	# Eindeutige Fenstertitel für die Rechner
+	IMPORT_TITLE = 'RechnerImportFenster2025'
+	NAEHRSTOFFE_TITLE = 'RechnerNaehrstoffeFenster2025'
+
 	btn_import = tb.Button(root, text="Rechner Import",
-		command=lambda: open_script('Rechner Import.py'), style=btn_style)
+		command=lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE), style=btn_style)
 	btn_import.pack(pady=10, fill='x', padx=40)
 
-	# Button für Rechner Nahrungsmittel in Nährstoffe
 	btn_naehrstoffe = tb.Button(root, text="Rechner Nahrungsmittel in Nährstoffe",
-		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py'), style=btn_style)
+		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE), style=btn_style)
 	btn_naehrstoffe.pack(pady=10, fill='x', padx=40)
 
 	# Einstellungs-Menü als eigenes Fenster
@@ -103,13 +131,12 @@ def main():
 		cb_full = tb.Checkbutton(settings_win, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
 		cb_full.pack(pady=10)
 
+
 		def save_settings():
 			with open(settings_path, 'w', encoding='utf-8') as f:
 				json.dump({'dark_mode': var_dark.get(), 'fullscreen': var_fullscreen.get()}, f)
 			settings_win.destroy()
 			root.destroy()
-			subprocess.Popen([sys.executable, os.path.abspath(__file__)])
-			root.quit()
 			subprocess.Popen([sys.executable, os.path.abspath(__file__)])
 
 		btn_save = tb.Button(settings_win, text="Speichern", command=save_settings, style=btn_style)

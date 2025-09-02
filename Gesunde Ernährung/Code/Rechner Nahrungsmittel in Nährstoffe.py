@@ -226,10 +226,9 @@ if os.path.exists(settings_path):
 	except Exception:
 		pass
 
-# Eindeutiger Fenstertitel für Hauptmenü-Handling
-HAUPTMENUE_TITLE = 'MeinErnaehrungsHauptmenue2025'
+NAEHRSTOFFE_TITLE = 'RechnerNaehrstoffeFenster2025'
 root = tb.Window(themename=get_theme())
-root.title(HAUPTMENUE_TITLE)
+root.title(NAEHRSTOFFE_TITLE)
 # Fenstergröße anpassen
 root.geometry('800x550')
 if fullscreen:
@@ -400,7 +399,7 @@ def sum_button_action():
 btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
-def bring_hauptmenue_to_front(window_title=HAUPTMENUE_TITLE):
+def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
 	def enumHandler(hwnd, lParam):
 		if win32gui.IsWindowVisible(hwnd):
 			if window_title in win32gui.GetWindowText(hwnd):
@@ -416,7 +415,7 @@ def zurueck_zum_hauptmenue():
 # Hauptmenü-Button unten rechts
 frame_hauptmenue = tb.Frame(root)
 frame_hauptmenue.pack(side='bottom', anchor='se', padx=10, pady=10, fill='x')
-btn_hauptmenue = tb.Button(frame_hauptmenue, text='Hauptmenü', command=zurueck_zum_hauptmenue)
+btn_hauptmenue = tb.Button(frame_hauptmenue, text='Verlassen', command=zurueck_zum_hauptmenue)
 btn_hauptmenue.pack(anchor='e', side='right')
 
 root.mainloop()

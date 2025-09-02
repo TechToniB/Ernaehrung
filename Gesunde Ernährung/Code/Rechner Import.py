@@ -226,10 +226,9 @@ if os.path.exists(settings_path):
         pass
 
 
-# Eindeutiger Fenstertitel für Hauptmenü-Handling
-HAUPTMENUE_TITLE = 'MeinErnaehrungsHauptmenue2025'
+IMPORT_TITLE = 'RechnerImportFenster2025'
 root = tb.Window(themename=get_theme())
-root.title(HAUPTMENUE_TITLE)
+root.title(IMPORT_TITLE)
 if fullscreen:
     root.attributes('-fullscreen', True)
 
@@ -246,7 +245,7 @@ frame_tabellen.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nse
 btn_pruefen = tb.Button(root, text="Prüfen", command=pruefe_werte)
 btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
 
-def bring_hauptmenue_to_front(window_title=HAUPTMENUE_TITLE):
+def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
     def enumHandler(hwnd, lParam):
         if win32gui.IsWindowVisible(hwnd):
             if window_title in win32gui.GetWindowText(hwnd):
@@ -271,7 +270,99 @@ root.grid_columnconfigure(GRID_LAST_COL, weight=1)
 # Hauptmenü-Button ganz unten rechts platzieren
 frame_hauptmenue = tk.Frame(root)
 frame_hauptmenue.grid(row=GRID_LAST_ROW, column=GRID_LAST_COL, sticky="se", padx=10, pady=10)
-btn_hauptmenue = tb.Button(frame_hauptmenue, text="Hauptmenü", command=zurueck_zum_hauptmenue)
+btn_hauptmenue = tb.Button(frame_hauptmenue, text="Verlassen", command=zurueck_zum_hauptmenue)
 btn_hauptmenue.pack(anchor='e', side='right')
+
+from tkinter import filedialog
+
+def speichern_unter():
+    if df_global is None:
+        messagebox.showerror("Fehler", "Keine Tabelle geladen.")
+        return
+    # Kopiere das DataFrame, um die Benutzereingaben einzufügen
+    df_save = df_global.copy()
+    pruefungsergebnisse = []
+    # Werte aus den Entry-Widgets übernehmen und Prüfung durchführen
+    for idx, entry in enumerate(eintrag_widgets):
+        val = entry.get()
+        df_save.at[idx, 'Dein Wert'] = val
+        # Prüflogik wie in pruefe_werte (vereinfacht, ohne Farben)
+        try:
+            ref_str = str(df_global.iloc[idx]['Referenzwert'])
+            match = re.search(r"[-+]?\d*\.?\d+", ref_str)
+            if not match:
+                pruefungsergebnisse.append("Kein Referenzwert")
+                continue
+            referenz = float(match.group())
+            if val.strip() == "":
+                pruefungsergebnisse.append("Kein Wert")
+                continue
+            try:
+                wert = float(val)
+            except ValueError:
+                pruefungsergebnisse.append("Ungültige Eingabe")
+                continue
+            kategorie = str(df_global.iloc[idx].get('Kategorie', '')).strip().lower()
+            naehrstoff = str(df_global.iloc[idx].get('Nährstoff', '')).strip().lower()
+            if kategorie == "richtwert":
+                tol = 0.01
+                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                    pruefungsergebnisse.append("Im Rahmen")
+                elif wert < referenz * (1 - tol):
+                    pruefungsergebnisse.append("Zu niedrig")
+                else:
+                    pruefungsergebnisse.append("Zu hoch")
+            elif kategorie == "schätzwert":
+                tol = 0.05
+                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                    pruefungsergebnisse.append("Im Rahmen")
+                elif wert < referenz * (1 - tol):
+                    pruefungsergebnisse.append("Zu niedrig")
+                else:
+                    pruefungsergebnisse.append("Zu hoch")
+            elif kategorie == "empfohlene zufuhr":
+                if "gesättigte fettsäuren" in naehrstoff:
+                    if wert <= referenz:
+                        pruefungsergebnisse.append("Im Rahmen")
+                    else:
+                        pruefungsergebnisse.append("Zu hoch")
+                else:
+                    tol = 0.10
+                    if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                        pruefungsergebnisse.append("Im Rahmen")
+                    elif wert < referenz * (1 - tol):
+                        pruefungsergebnisse.append("Zu niedrig")
+                    else:
+                        pruefungsergebnisse.append("Zu hoch")
+            else:
+                tol = 0.01
+                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                    pruefungsergebnisse.append("Im Rahmen")
+                elif wert < referenz * (1 - tol):
+                    pruefungsergebnisse.append("Zu niedrig")
+                else:
+                    pruefungsergebnisse.append("Zu hoch")
+        except Exception:
+            pruefungsergebnisse.append("Fehler in Zeile")
+    # Spalte anhängen
+    df_save['Prüfung'] = pruefungsergebnisse
+    # Dateidialog für Speichern unter
+    file_path = filedialog.asksaveasfilename(
+        defaultextension=".xlsx",
+        filetypes=[("Excel-Dateien", "*.xlsx")],
+        title="Speichern unter"
+    )
+    if file_path:
+        try:
+            df_save.to_excel(file_path, index=False)
+            messagebox.showinfo("Erfolg", f"Datei gespeichert unter:\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
+
+# ...existing code...
+
+# Speichern unter-Button
+btn_speichern = tb.Button(root, text="Speichern unter", command=speichern_unter)
+btn_speichern.grid(row=2, column=1, sticky="w", padx=10, pady=5)
 
 root.mainloop()
