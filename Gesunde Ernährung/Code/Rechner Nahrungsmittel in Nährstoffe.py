@@ -211,11 +211,24 @@ except Exception as e:
 	sys.exit(1)
 
 
+
 # --- GUI erstellen ---
+import os, json
+settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+fullscreen = False
+if os.path.exists(settings_path):
+	try:
+		with open(settings_path, 'r', encoding='utf-8') as f:
+			settings = json.load(f)
+			fullscreen = settings.get('fullscreen', False)
+	except Exception:
+		pass
 root = tb.Window(themename=get_theme())
 root.title('Nährstoffanzeige')
 # Fenstergröße anpassen
 root.geometry('800x550')
+if fullscreen:
+	root.attributes('-fullscreen', True)
 
 
 # --- Dynamische Auswahlfelder in eigenem Container ---
@@ -378,6 +391,15 @@ def sum_button_action():
 
 btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
+
+def zurueck_zum_hauptmenue():
+	root.destroy()
+
+# Hauptmenü-Button unten rechts
+frame_hauptmenue = tb.Frame(root)
+frame_hauptmenue.pack(side='bottom', anchor='se', padx=10, pady=10, fill='x')
+btn_hauptmenue = tb.Button(frame_hauptmenue, text='Hauptmenü', command=zurueck_zum_hauptmenue)
+btn_hauptmenue.pack(anchor='e', side='right')
 
 root.mainloop()
 

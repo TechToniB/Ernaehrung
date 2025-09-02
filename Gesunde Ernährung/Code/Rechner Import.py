@@ -196,9 +196,22 @@ filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" 
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx")]
 
 
-# Fenster erstellen
+
+# Fenster erstellen mit optionalem Vollbildmodus
+import os, json
+settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+fullscreen = False
+if os.path.exists(settings_path):
+    try:
+        with open(settings_path, 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+            fullscreen = settings.get('fullscreen', False)
+    except Exception:
+        pass
 root = tb.Window(themename=get_theme())
 root.title("Tabellen-Auswahl")
+if fullscreen:
+    root.attributes('-fullscreen', True)
 
 # Auswahlfeld für Tabellen
 combo_tabellen = ttk.Combobox(root, values=tabellen, state="readonly")
@@ -212,5 +225,14 @@ frame_tabellen.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
 # Prüfen-Button
 btn_pruefen = tk.Button(root, text="Prüfen", command=pruefe_werte)
 btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+
+def zurueck_zum_hauptmenue():
+    root.destroy()
+
+# Hauptmenü-Button unten rechts
+frame_hauptmenue = tk.Frame(root)
+frame_hauptmenue.grid(row=3, column=0, columnspan=2, sticky="se", padx=10, pady=10)
+btn_hauptmenue = tk.Button(frame_hauptmenue, text="Hauptmenü", command=zurueck_zum_hauptmenue)
+btn_hauptmenue.pack(anchor="se")
 
 root.mainloop()
