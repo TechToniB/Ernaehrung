@@ -37,8 +37,10 @@ def clear_output():
 	textfeld.config(state='normal')
 	textfeld.delete('1.0', tk.END)
 	textfeld.config(state='disabled')
+	# Summen-Button wieder einblenden
+	if not btn_sum.winfo_ismapped():
+		btn_sum.pack(side='left', padx=(0, 10))
 from tkinter import filedialog
-# Funktion zum Speichern der Ergebnisse in eine Datei
 def speichere_ergebnisse():
 	# Gehe alle Auswahl-Frames durch und sammle die Ergebnisse
 	alle_ergebnisse = []
@@ -48,9 +50,10 @@ def speichere_ergebnisse():
 		menge_entry = None
 		# Finde das Dropdown und das Mengenfeld im Frame
 		for child in children:
-			if isinstance(child, ttk.Combobox):
+			# Prüfe auf AutocompleteCombobox und tb.Entry
+			if isinstance(child, AutocompleteCombobox):
 				combo = child
-			if isinstance(child, ttk.Entry):
+			if isinstance(child, tb.Entry):
 				menge_entry = child
 		if combo is None or menge_entry is None:
 			continue
@@ -131,7 +134,7 @@ def speichere_ergebnisse():
 	for frame in auswahl_frames:
 		children = frame.winfo_children()
 		for child in children:
-			if isinstance(child, ttk.Combobox):
+			if isinstance(child, AutocompleteCombobox):
 				name = child.get()
 				if name and name not in lebensmittel_namen:
 					lebensmittel_namen.append(name)
@@ -169,8 +172,11 @@ def speichere_ergebnisse():
 import pandas as pd
 import os
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 import sys
+# Importiere ttkbootstrap (nur für Theme, nicht für Combobox)
+import ttkbootstrap as tb
+
 
 # Excel-Datei laden mit Fehlerbehandlung
 try:
@@ -197,7 +203,7 @@ except Exception as e:
 	sys.exit(1)
 
 # --- GUI erstellen ---
-root = tk.Tk()
+root = tb.Window(themename="flatly")
 root.title('Nährstoffanzeige')
 # Fenstergröße anpassen
 root.geometry('800x550')
@@ -205,38 +211,52 @@ root.geometry('800x550')
 
 # --- Dynamische Auswahlfelder in eigenem Container ---
 auswahl_frames = []
-auswahl_container = ttk.Frame(root)
+auswahl_container = tb.Frame(root)
 auswahl_container.pack(padx=10, pady=(10, 0), fill='x')
 
 # Funktion zum Hinzufügen eines neuen Auswahlfeldes (Dropdown + Menge + Buttons)
 def add_auswahl_frame(first=False):
-	frame = ttk.Frame(auswahl_container)
+	frame = tb.Frame(auswahl_container)
 	frame.pack(padx=0, pady=2, fill='x')
 	auswahl_frames.append(frame)
 
-	# Dropdown für Lebensmittel
-	ttk.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
-	combo = ttk.Combobox(frame, values=lebensmittel_liste, state='readonly', width=40)
+
+	# Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
+	tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
+	combo_var = tk.StringVar()
+	combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
 	combo.pack(side='left', padx=(0,10))
 
+	# Dynamische Filterung beim Tippen
+	def on_keyrelease(event):
+		value = combo_var.get().lower()
+		if value == '':
+			combo['values'] = lebensmittel_liste
+		else:
+			filtered = [item for item in lebensmittel_liste if value in item.lower()]
+			combo['values'] = filtered
+	combo.bind('<KeyRelease>', on_keyrelease)
+
+
 	# Eingabefeld für Menge
-	ttk.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
+	tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
 	menge_var = tk.StringVar(value='100')
-	menge_entry = ttk.Entry(frame, textvariable=menge_var, width=8)
+	menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
 	menge_entry.pack(side='left')
 
+
 	# Button für diese Auswahl
-	btn = ttk.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
+	btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
 	btn.pack(side='left', padx=(10,0))
 
 	# + Button nur beim ersten Frame
 	if first:
-		btn_add = ttk.Button(frame, text='+', width=2, command=add_auswahl_frame)
+		btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
 		btn_add.pack(side='left', padx=(10,0))
 
 	# Entfernen-Button für weitere Auswahlfelder
 	if len(auswahl_frames) > 1:
-		btn_remove = ttk.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
+		btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
 		btn_remove.pack(side='left', padx=(5,0))
 
 # Funktion zum Entfernen eines Auswahlfeldes
@@ -332,16 +352,22 @@ def zeige_naehrstoffe(combo, menge_var):
 
 
 # Buttons nebeneinander in einem Frame
-frame_buttons = ttk.Frame(root)
+
+frame_buttons = tb.Frame(root)
 frame_buttons.pack(padx=10, pady=5)
 # Button zum Speichern der Ergebnisse
-btn_save = ttk.Button(frame_buttons, text='Ergebnisse speichern', command=speichere_ergebnisse)
+btn_save = tb.Button(frame_buttons, text='Ergebnisse speichern', command=speichere_ergebnisse)
 btn_save.pack(side='left', padx=(0, 10))
 # Button zum Leeren der Ausgabe
-btn_clear = ttk.Button(frame_buttons, text='Ausgabe leeren', command=clear_output)
+btn_clear = tb.Button(frame_buttons, text='Ausgabe leeren', command=clear_output)
 btn_clear.pack(side='left', padx=(0, 10))
-# Button zum Berechnen der Summen
-btn_sum = ttk.Button(frame_buttons, text='Summen berechnen', command=addiere_werte_in_ausgabe)
+
+# Button zum Berechnen der Summen (wird dynamisch ein-/ausgeblendet)
+def sum_button_action():
+	addiere_werte_in_ausgabe()
+	btn_sum.pack_forget()  # Button ausblenden
+
+btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
 root.mainloop()
@@ -351,33 +377,32 @@ root = tk.Tk()
 
 # --- Dynamische Auswahlfelder in eigenem Container ---
 auswahl_frames = []
-auswahl_container = ttk.Frame(root)
+auswahl_container = tb.Frame(root)
 auswahl_container.pack(padx=10, pady=(10, 0), fill='x')
 
 def add_auswahl_frame(first=False):
-	frame = ttk.Frame(auswahl_container)
+	frame = tb.Frame(auswahl_container)
 	frame.pack(padx=0, pady=2, fill='x')
 	auswahl_frames.append(frame)
 
-	ttk.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
-	combo = ttk.Combobox(frame, values=lebensmittel_liste, state='readonly', width=40)
-	combo.pack(side='left', padx=(0,10))
+	tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
+	# (AutocompleteCombobox wird bereits verwendet)
 
-	ttk.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
+	tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
 	menge_var = tk.StringVar(value='100')
-	menge_entry = ttk.Entry(frame, textvariable=menge_var, width=8)
+	menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
 	menge_entry.pack(side='left')
 
-	btn = ttk.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
+	btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
 	btn.pack(side='left', padx=(10,0))
 
 	# + Button nur beim ersten Frame
 	if first:
-		btn_add = ttk.Button(frame, text='+', width=2, command=add_auswahl_frame)
+		btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
 		btn_add.pack(side='left', padx=(10,0))
 
 	if len(auswahl_frames) > 1:
-		btn_remove = ttk.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
+		btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
 		btn_remove.pack(side='left', padx=(5,0))
 
 def remove_auswahl_frame(frame):
