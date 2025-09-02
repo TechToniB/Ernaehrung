@@ -176,6 +176,8 @@ import argparse
 import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as tb
+import win32gui
+import win32con
 
 # Dark mode support
 def get_theme():
@@ -224,8 +226,10 @@ if os.path.exists(settings_path):
 	except Exception:
 		pass
 
+# Eindeutiger Fenstertitel für Hauptmenü-Handling
+HAUPTMENUE_TITLE = 'MeinErnaehrungsHauptmenue2025'
 root = tb.Window(themename=get_theme())
-root.title('Nährstoffanzeige')
+root.title(HAUPTMENUE_TITLE)
 # Fenstergröße anpassen
 root.geometry('800x550')
 if fullscreen:
@@ -396,11 +400,18 @@ def sum_button_action():
 btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
+def bring_hauptmenue_to_front(window_title=HAUPTMENUE_TITLE):
+	def enumHandler(hwnd, lParam):
+		if win32gui.IsWindowVisible(hwnd):
+			if window_title in win32gui.GetWindowText(hwnd):
+				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+				win32gui.SetForegroundWindow(hwnd)
+	win32gui.EnumWindows(enumHandler, None)
+
 def zurueck_zum_hauptmenue():
-	# Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen
-	import os
-	os.system("powershell -Command \"Add-Type @'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\\\"user32.dll\\\")] public static extern bool SetForegroundWindow(IntPtr hWnd); }'@; Get-Process | Where-Object { $_.MainWindowTitle -like '*Hauptmenü*' } | ForEach-Object { $hwnd = $_.MainWindowHandle; if ($hwnd -is [System.Array]) { $hwnd = $hwnd[0] }; if ($hwnd -and $hwnd -ne 0) { [void][Win32]::ShowWindowAsync($hwnd, 9); [void][Win32]::SetForegroundWindow($hwnd); try { [void](New-Object -ComObject WScript.Shell).AppActivate($_.Id) } catch {} } }\"")
-	root.destroy()
+    # Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen (ohne PowerShell, mit pywin32)
+    bring_hauptmenue_to_front()
+    root.destroy()
 
 # Hauptmenü-Button unten rechts
 frame_hauptmenue = tb.Frame(root)

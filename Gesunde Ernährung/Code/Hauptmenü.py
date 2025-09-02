@@ -8,14 +8,14 @@ import json
 import ttkbootstrap as tb
 
 
-def open_script(script_name, root):
+def open_script(script_name):
 	# Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
 	script_path = os.path.join(os.path.dirname(__file__), script_name)
 	# Prüfen, ob das Skript bereits läuft
 	for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
 		try:
 			cmdline = proc.info['cmdline']
-			if cmdline and script_path in cmdline:
+			if cmdline and any(os.path.basename(script_path) == os.path.basename(arg) for arg in cmdline):
 				return  # Bereits laufend, nichts tun
 		except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
 			continue
@@ -26,8 +26,9 @@ def open_script(script_name, root):
 			with open(settings_path, 'r', encoding='utf-8') as f:
 				settings = json.load(f)
 				dark_mode = settings.get('dark_mode', False)
-		except Exception:
-			pass
+		except Exception as e:
+			import logging
+			logging.exception("Error reading settings.json")
 	# Übergib dark_mode als Argument
 	args = [sys.executable, script_path]
 	if dark_mode:
@@ -49,8 +50,10 @@ def main():
 			pass
 
 	themename = "darkly" if dark_mode else "flatly"
+	# Eindeutiger Fenstertitel für das Hauptmenü
+	HAUPTMENUE_TITLE = 'MeinErnaehrungsHauptmenue2025'
 	root = tb.Window(themename=themename)
-	root.title('Hauptmenü')
+	root.title(HAUPTMENUE_TITLE)
 	root.geometry('400x300')
 	if fullscreen:
 		root.attributes('-fullscreen', True)
@@ -67,12 +70,12 @@ def main():
 
 	# Button für Rechner Import
 	btn_import = tb.Button(root, text="Rechner Import",
-		command=lambda: open_script('Rechner Import.py', root), style=btn_style)
+		command=lambda: open_script('Rechner Import.py'), style=btn_style)
 	btn_import.pack(pady=10, fill='x', padx=40)
 
 	# Button für Rechner Nahrungsmittel in Nährstoffe
 	btn_naehrstoffe = tb.Button(root, text="Rechner Nahrungsmittel in Nährstoffe",
-		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', root), style=btn_style)
+		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py'), style=btn_style)
 	btn_naehrstoffe.pack(pady=10, fill='x', padx=40)
 
 	# Einstellungs-Menü als eigenes Fenster
@@ -93,7 +96,7 @@ def main():
 		cb_dark.pack(pady=10)
 
 		# Callback, um Stil dynamisch zu ändern
-		def update_dark_style(*_):
+		def update_dark_style(*args):
 			cb_dark.configure(bootstyle="primary-round-toggle" if var_dark.get() else "round-toggle")
 		var_dark.trace_add('write', update_dark_style)
 
@@ -105,7 +108,8 @@ def main():
 				json.dump({'dark_mode': var_dark.get(), 'fullscreen': var_fullscreen.get()}, f)
 			settings_win.destroy()
 			root.destroy()
-			# Starte das Hauptmenü als neuen Prozess, um Probleme mit Tkinter zu vermeiden
+			subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+			root.quit()
 			subprocess.Popen([sys.executable, os.path.abspath(__file__)])
 
 		btn_save = tb.Button(settings_win, text="Speichern", command=save_settings, style=btn_style)

@@ -1,4 +1,3 @@
-
 import pandas as pd
 import sys
 import argparse
@@ -6,11 +5,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 import re
+import os
+import json
 try:
     import ttkbootstrap as tb
 except ImportError:
     print("Das Modul 'ttkbootstrap' ist nicht installiert. Bitte installieren Sie es mit 'pip install ttkbootstrap'.")
     sys.exit(1)
+import win32gui
+import win32con
+import math
 
 # Dark mode support
 def get_theme():
@@ -65,7 +69,6 @@ def zeige_tabelle():
         frames.append(f)
 
     # Jeden Teil in einem eigenen Frame anzeigen
-    import math
     for teil_idx, teil in enumerate(teile):
         # Spaltenüberschriften
         for i, col in enumerate(teil.columns):
@@ -120,7 +123,12 @@ def pruefe_werte():
                 ergebnisse.append("Kein Wert")
                 eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
-            wert = float(eintrag)
+            try:
+                wert = float(eintrag)
+            except ValueError:
+                ergebnisse.append("Ungültige Eingabe")
+                eintrag_widgets[idx].config(bg=COLOR_FAIL)
+                continue
             kategorie = str(row.get('Kategorie', '')).strip().lower()
             naehrstoff = str(row.get('Nährstoff', '')).strip().lower()
             im_rahmen = False
@@ -172,33 +180,41 @@ def pruefe_werte():
                 eintrag_widgets[idx].config(bg=COLOR_OK)
             else:
                 eintrag_widgets[idx].config(bg=COLOR_FAIL)
-        except Exception as e:
-            print(f"Fehler beim Prüfen der Werte in Zeile {idx}: {e}")
-            ergebnisse.append("Ungültig")
-            eintrag_widgets[idx].config(bg=COLOR_FAIL)
-    # Ergebnisse in den jeweiligen Frames anzeigen
-    idx = 0
-    n = len(df_global)
-    drittel = (n + 2) // 3
-    for teil_idx in range(3):
-        frames = frame_tabellen.grid_slaves(row=0, column=teil_idx)
-        if not frames:
-            continue
-        frame = frames[0]
-        rows = len(df_global.iloc[teil_idx*drittel : min((teil_idx+1)*drittel, n)])
-        for row in range(1, rows+1):
-            tk.Label(frame, text=ergebnisse[idx], relief="ridge", bg="#f0f0f0").grid(row=row, column=len(df_global.columns)+1, sticky="nsew")
-            idx += 1
+        except Exception:
+            ergebnisse.append("Fehler in Zeile")
+            if idx < len(eintrag_widgets):
+                eintrag_widgets[idx].config(bg=COLOR_FAIL)
+    def zeige_ergebnisse_in_tabelle(ergebnisse):
+        idx = 0
+        n = len(df_global)
+        drittel = (n + 2) // 3
+        teile = [
+            df_global.iloc[0:drittel],
+            df_global.iloc[drittel:2*drittel],
+            df_global.iloc[2*drittel:]
+        ]
+        for teil_idx in range(3):
+            frames = frame_tabellen.grid_slaves(row=0, column=teil_idx)
+            if not frames:
+                continue
+            frame = frames[0]
+            teil = teile[teil_idx]
+            rows = len(teil)
+            num_cols = len(teil.columns)
+            for row in range(1, rows+1):
+                tk.Label(frame, text=ergebnisse[idx], relief="ridge", bg="#f0f0f0").grid(row=row, column=num_cols+1, sticky="nsew")
+                idx += 1
 
-
+    zeige_ergebnisse_in_tabelle(ergebnisse)
 # Filter-Ordner festlegen (hier werden die Excel-Dateien gesucht)
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
-tabellen = [f.name for f in filter_ordner.glob("*.xlsx")]
 
-
+# Tabellen-Dateien im Filter-Ordner auflisten
+tabellen = [f.name for f in filter_ordner.glob("*.xlsx") if f.is_file()]
 
 # Fenster erstellen mit optionalem Vollbildmodus
-import os, json
+import os
+import json
 settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 fullscreen = False
 if os.path.exists(settings_path):
@@ -208,13 +224,14 @@ if os.path.exists(settings_path):
             fullscreen = settings.get('fullscreen', False)
     except Exception:
         pass
+
+
+# Eindeutiger Fenstertitel für Hauptmenü-Handling
+HAUPTMENUE_TITLE = 'MeinErnaehrungsHauptmenue2025'
 root = tb.Window(themename=get_theme())
-root.title("Tabellen-Auswahl")
+root.title(HAUPTMENUE_TITLE)
 if fullscreen:
     root.attributes('-fullscreen', True)
-# Fenster in den Vordergrund holen
-root.lift()
-root.focus_force()
 
 # Auswahlfeld für Tabellen
 combo_tabellen = ttk.Combobox(root, values=tabellen, state="readonly")
@@ -223,25 +240,37 @@ combo_tabellen.bind("<<ComboboxSelected>>", tabelle_ausgewaehlt)
 
 # Frame für Tabellenausgabe
 frame_tabellen = tk.Frame(root)
-frame_tabellen.grid(row=1, column=0, columnspan=2, padx=10, pady=10)
+frame_tabellen.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
 
 # Prüfen-Button
-btn_pruefen = tk.Button(root, text="Prüfen", command=pruefe_werte)
+btn_pruefen = tb.Button(root, text="Prüfen", command=pruefe_werte)
 btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
 
+def bring_hauptmenue_to_front(window_title=HAUPTMENUE_TITLE):
+    def enumHandler(hwnd, lParam):
+        if win32gui.IsWindowVisible(hwnd):
+            if window_title in win32gui.GetWindowText(hwnd):
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.SetForegroundWindow(hwnd)
+    win32gui.EnumWindows(enumHandler, None)
+
 def zurueck_zum_hauptmenue():
-    # Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen
-    import os
-    os.system("powershell -Command \"Add-Type @'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\\\"user32.dll\\\")] public static extern bool SetForegroundWindow(IntPtr hWnd); }'@; Get-Process | Where-Object { $_.MainWindowTitle -like '*Hauptmenü*' } | ForEach-Object { $hwnd = $_.MainWindowHandle; if ($hwnd -is [System.Array]) { $hwnd = $hwnd[0] }; if ($hwnd -and $hwnd -ne 0) { [void][Win32]::ShowWindowAsync($hwnd, 9); [void][Win32]::SetForegroundWindow($hwnd); try { [void](New-Object -ComObject WScript.Shell).AppActivate($_.Id) } catch {} } }\"")
+
+    # Hier sollte die Logik für das Zurückkehren zum Hauptmenü stehen
+    bring_hauptmenue_to_front()
     root.destroy()
 
+# Konstanten für spezielle Grid-Positionen (letzte Zeile/Spalte für flexible Layouts)
+GRID_LAST_ROW = 100  # Wird für flexible Zeilengröße verwendet
+GRID_LAST_COL = 2    # Wird für flexible Spaltengröße verwendet
 
 # Grid so konfigurieren, dass die letzte Zeile/Spalte flexibel ist
-root.grid_rowconfigure(100, weight=1)
-root.grid_columnconfigure(2, weight=1)
-# Hauptmenü-Button ganz unten rechts
+root.grid_rowconfigure(GRID_LAST_ROW, weight=1)
+root.grid_columnconfigure(GRID_LAST_COL, weight=1)
+
+# Hauptmenü-Button ganz unten rechts platzieren
 frame_hauptmenue = tk.Frame(root)
-frame_hauptmenue.grid(row=100, column=2, sticky="se", padx=10, pady=10)
+frame_hauptmenue.grid(row=GRID_LAST_ROW, column=GRID_LAST_COL, sticky="se", padx=10, pady=10)
 btn_hauptmenue = tb.Button(frame_hauptmenue, text="Hauptmenü", command=zurueck_zum_hauptmenue)
 btn_hauptmenue.pack(anchor='e', side='right')
 
