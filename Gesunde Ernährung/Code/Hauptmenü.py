@@ -1,13 +1,10 @@
 import tkinter as tk
-import ttkbootstrap as tb
 import subprocess
 import os
 import sys
 import psutil
 import json
-
-import json
-
+import ttkbootstrap as tb
 def open_script(script_name):
 	# Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
 	script_path = os.path.join(os.path.dirname(__file__), script_name)
@@ -20,8 +17,8 @@ def open_script(script_name):
 				return  # Bereits laufend, nichts tun
 		except (psutil.NoSuchProcess, psutil.AccessDenied):
 			continue
-
-	# Lese Dark Mode Einstellung
+		except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+			continue
 	settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 	dark_mode = False
 	if os.path.exists(settings_path):
@@ -29,7 +26,10 @@ def open_script(script_name):
 			with open(settings_path, 'r', encoding='utf-8') as f:
 				settings = json.load(f)
 				dark_mode = settings.get('dark_mode', False)
-		except Exception:
+		except Exception as e:
+			# Safe to ignore: If settings.json is corrupt or unreadable, fallback to default dark_mode=False
+			# Uncomment the next line to log the error for debugging:
+			# print(f"Error reading settings.json: {e}")
 			pass
 
 	# Übergib dark_mode als Argument
@@ -50,10 +50,14 @@ def main():
 		except Exception:
 			pass
 
+
 	themename = "darkly" if dark_mode else "flatly"
 	root = tb.Window(themename=themename)
 	root.title('Hauptmenü')
 	root.geometry('400x300')
+
+	# BooleanVar für Dark Mode Checkbox
+	var_dark = tk.BooleanVar(value=dark_mode)
 
 	label = tb.Label(root, text="Bitte wählen Sie eine Funktion:", font=("Arial", 14))
 	label.pack(pady=20)
@@ -77,16 +81,12 @@ def main():
 		settings_win.title("Einstellungen")
 		settings_win.geometry("300x150")
 		settings_win.grab_set()
-
-		var_dark = tk.BooleanVar(value=dark_mode)
-
 		def save_settings():
 			with open(settings_path, 'w', encoding='utf-8') as f:
 				json.dump({'dark_mode': var_dark.get()}, f)
 			settings_win.destroy()
 			root.destroy()
 			# Starte das Hauptmenü als neuen Prozess, um Probleme mit Tkinter zu vermeiden
-			import subprocess, sys
 			subprocess.Popen([sys.executable, os.path.abspath(__file__)])
 
 		cb_dark = tb.Checkbutton(settings_win, text="Dark Mode aktivieren", variable=var_dark, bootstyle="dark-round-toggle" if dark_mode else "round-toggle")

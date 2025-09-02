@@ -6,7 +6,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 import re
-import ttkbootstrap as tb
+try:
+    import ttkbootstrap as tb
+except ImportError:
+    print("Das Modul 'ttkbootstrap' ist nicht installiert. Bitte installieren Sie es mit 'pip install ttkbootstrap'.")
+    sys.exit(1)
 
 # Dark mode support
 def get_theme():
@@ -61,6 +65,7 @@ def zeige_tabelle():
         frames.append(f)
 
     # Jeden Teil in einem eigenen Frame anzeigen
+    import math
     for teil_idx, teil in enumerate(teile):
         # Spaltenüberschriften
         for i, col in enumerate(teil.columns):
@@ -69,7 +74,12 @@ def zeige_tabelle():
         # Zeilen mit Daten und Eingabefeld
         for row_idx, row in enumerate(teil.itertuples(index=False), 1):
             for col_idx, value in enumerate(row):
-                tk.Label(frames[teil_idx], text=str(value), relief="ridge").grid(row=row_idx, column=col_idx, sticky="nsew")
+                # Wenn Wert NaN ist, nichts anzeigen
+                if value is None or (isinstance(value, float) and math.isnan(value)):
+                    label_text = ""
+                else:
+                    label_text = str(value)
+                tk.Label(frames[teil_idx], text=label_text, relief="ridge").grid(row=row_idx, column=col_idx, sticky="nsew")
             # Eingabefeld für eigenen Wert
             eintrag = tk.Entry(frames[teil_idx], width=10)
             eintrag.grid(row=row_idx, column=len(teil.columns), sticky="nsew")
@@ -92,77 +102,94 @@ def pruefe_werte():
     if df_global is None:
         return
     ergebnisse = []
+    # Farben für die Einfärbung
+    COLOR_OK = '#b6fcb6'   # Hellgrün
+    COLOR_FAIL = '#ffb3b3' # Hellrot
     # Alle Zeilen der Tabelle durchgehen
-    for idx, (i, row) in enumerate(df_global.iterrows()):
+    for idx, (_, row) in enumerate(df_global.iterrows()):
         try:
-            # Nur die erste Zahl aus dem Referenzwert extrahieren (z.B. "12 mg" -> 12)
             ref_str = str(row['Referenzwert'])
             match = re.search(r"[-+]?\d*\.?\d+", ref_str)
             if not match:
                 ergebnisse.append("Kein Referenzwert")
+                eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
             referenz = float(match.group())
             eintrag = eintrag_widgets[idx].get()
             if eintrag.strip() == "":
                 ergebnisse.append("Kein Wert")
+                eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
             wert = float(eintrag)
-            # Kategorie und Nährstoff bestimmen
             kategorie = str(row.get('Kategorie', '')).strip().lower()
             naehrstoff = str(row.get('Nährstoff', '')).strip().lower()
-            # Toleranz je nach Kategorie bestimmen
+            im_rahmen = False
             if kategorie == "richtwert":
-                tol = 0.01  # 1%
-                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                tol = 0.01
+                im_rahmen = referenz * (1 - tol) <= wert <= referenz * (1 + tol)
+                if im_rahmen:
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
                     ergebnisse.append("Zu niedrig")
                 else:
                     ergebnisse.append("Zu hoch")
             elif kategorie == "schätzwert":
-                tol = 0.05  # 5%
-                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                tol = 0.05
+                im_rahmen = referenz * (1 - tol) <= wert <= referenz * (1 + tol)
+                if im_rahmen:
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
                     ergebnisse.append("Zu niedrig")
                 else:
                     ergebnisse.append("Zu hoch")
             elif kategorie == "empfohlene zufuhr":
-                # Für gesättigte Fettsäuren nur nach unten Toleranz
                 if "gesättigte fettsäuren" in naehrstoff:
-                    if wert <= referenz:
+                    im_rahmen = wert <= referenz
+                    if im_rahmen:
                         ergebnisse.append("Im Rahmen")
                     else:
                         ergebnisse.append("Zu hoch")
                 else:
-                    tol = 0.10  # 10%
-                    if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                    tol = 0.10
+                    im_rahmen = referenz * (1 - tol) <= wert <= referenz * (1 + tol)
+                    if im_rahmen:
                         ergebnisse.append("Im Rahmen")
                     elif wert < referenz * (1 - tol):
                         ergebnisse.append("Zu niedrig")
                     else:
                         ergebnisse.append("Zu hoch")
             else:
-                # Standard: 1% Toleranz
                 tol = 0.01
-                if referenz * (1 - tol) <= wert <= referenz * (1 + tol):
+                im_rahmen = referenz * (1 - tol) <= wert <= referenz * (1 + tol)
+                if im_rahmen:
                     ergebnisse.append("Im Rahmen")
                 elif wert < referenz * (1 - tol):
                     ergebnisse.append("Zu niedrig")
                 else:
                     ergebnisse.append("Zu hoch")
-        except Exception:
+            # Zelle einfärben
+            if im_rahmen:
+                eintrag_widgets[idx].config(bg=COLOR_OK)
+            else:
+                eintrag_widgets[idx].config(bg=COLOR_FAIL)
+        except Exception as e:
+            print(f"Fehler beim Prüfen der Werte in Zeile {idx}: {e}")
             ergebnisse.append("Ungültig")
+            eintrag_widgets[idx].config(bg=COLOR_FAIL)
     # Ergebnisse in den jeweiligen Frames anzeigen
     idx = 0
     n = len(df_global)
     drittel = (n + 2) // 3
     for teil_idx in range(3):
-        frame = frame_tabellen.grid_slaves(row=0, column=teil_idx)[0]
+        frames = frame_tabellen.grid_slaves(row=0, column=teil_idx)
+        if not frames:
+            continue
+        frame = frames[0]
         rows = len(df_global.iloc[teil_idx*drittel : min((teil_idx+1)*drittel, n)])
         for row in range(1, rows+1):
             tk.Label(frame, text=ergebnisse[idx], relief="ridge", bg="#f0f0f0").grid(row=row, column=len(df_global.columns)+1, sticky="nsew")
             idx += 1
+
 
 # Filter-Ordner festlegen (hier werden die Excel-Dateien gesucht)
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
