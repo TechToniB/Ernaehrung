@@ -7,7 +7,8 @@ import psutil
 import json
 import ttkbootstrap as tb
 
-def open_script(script_name):
+
+def open_script(script_name, root):
 	# Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
 	script_path = os.path.join(os.path.dirname(__file__), script_name)
 	# Prüfen, ob das Skript bereits läuft
@@ -66,12 +67,12 @@ def main():
 
 	# Button für Rechner Import
 	btn_import = tb.Button(root, text="Rechner Import",
-		command=lambda: open_script('Rechner Import.py'), style=btn_style)
+		command=lambda: open_script('Rechner Import.py', root), style=btn_style)
 	btn_import.pack(pady=10, fill='x', padx=40)
 
 	# Button für Rechner Nahrungsmittel in Nährstoffe
 	btn_naehrstoffe = tb.Button(root, text="Rechner Nahrungsmittel in Nährstoffe",
-		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py'), style=btn_style)
+		command=lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', root), style=btn_style)
 	btn_naehrstoffe.pack(pady=10, fill='x', padx=40)
 
 	# Einstellungs-Menü als eigenes Fenster

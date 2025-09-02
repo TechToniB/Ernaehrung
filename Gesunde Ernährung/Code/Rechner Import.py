@@ -212,6 +212,9 @@ root = tb.Window(themename=get_theme())
 root.title("Tabellen-Auswahl")
 if fullscreen:
     root.attributes('-fullscreen', True)
+# Fenster in den Vordergrund holen
+root.lift()
+root.focus_force()
 
 # Auswahlfeld für Tabellen
 combo_tabellen = ttk.Combobox(root, values=tabellen, state="readonly")
@@ -227,6 +230,9 @@ btn_pruefen = tk.Button(root, text="Prüfen", command=pruefe_werte)
 btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
 
 def zurueck_zum_hauptmenue():
+    # Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen
+    import os
+    os.system("powershell -Command \"Add-Type @'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\\\"user32.dll\\\")] public static extern bool SetForegroundWindow(IntPtr hWnd); }'@; Get-Process | Where-Object { $_.MainWindowTitle -like '*Hauptmenü*' } | ForEach-Object { $hwnd = $_.MainWindowHandle; if ($hwnd -is [System.Array]) { $hwnd = $hwnd[0] }; if ($hwnd -and $hwnd -ne 0) { [void][Win32]::ShowWindowAsync($hwnd, 9); [void][Win32]::SetForegroundWindow($hwnd); try { [void](New-Object -ComObject WScript.Shell).AppActivate($_.Id) } catch {} } }\"")
     root.destroy()
 
 

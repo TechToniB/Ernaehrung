@@ -223,12 +223,16 @@ if os.path.exists(settings_path):
 			fullscreen = settings.get('fullscreen', False)
 	except Exception:
 		pass
+
 root = tb.Window(themename=get_theme())
 root.title('Nährstoffanzeige')
 # Fenstergröße anpassen
 root.geometry('800x550')
 if fullscreen:
 	root.attributes('-fullscreen', True)
+# Fenster in den Vordergrund holen
+root.lift()
+root.focus_force()
 
 
 # --- Dynamische Auswahlfelder in eigenem Container ---
@@ -393,6 +397,9 @@ btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_a
 btn_sum.pack(side='left', padx=(0, 10))
 
 def zurueck_zum_hauptmenue():
+	# Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen
+	import os
+	os.system("powershell -Command \"Add-Type @'using System; using System.Runtime.InteropServices; public class Win32 { [DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow); [DllImport(\\\"user32.dll\\\")] public static extern bool SetForegroundWindow(IntPtr hWnd); }'@; Get-Process | Where-Object { $_.MainWindowTitle -like '*Hauptmenü*' } | ForEach-Object { $hwnd = $_.MainWindowHandle; if ($hwnd -is [System.Array]) { $hwnd = $hwnd[0] }; if ($hwnd -and $hwnd -ne 0) { [void][Win32]::ShowWindowAsync($hwnd, 9); [void][Win32]::SetForegroundWindow($hwnd); try { [void](New-Object -ComObject WScript.Shell).AppActivate($_.Id) } catch {} } }\"")
 	root.destroy()
 
 # Hauptmenü-Button unten rechts
@@ -403,53 +410,3 @@ btn_hauptmenue.pack(anchor='e', side='right')
 
 root.mainloop()
 
-# --- GUI erstellen ---
-root = tk.Tk()
-
-# --- Dynamische Auswahlfelder in eigenem Container ---
-auswahl_frames = []
-auswahl_container = tb.Frame(root)
-auswahl_container.pack(padx=10, pady=(10, 0), fill='x')
-
-def add_auswahl_frame(first=False):
-	frame = tb.Frame(auswahl_container)
-	frame.pack(padx=0, pady=2, fill='x')
-	auswahl_frames.append(frame)
-
-
-	# Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
-	tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
-	combo_var = tk.StringVar()
-	combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
-	combo.pack(side='left', padx=(0,10))
-	def on_keyrelease(event):
-		value = combo_var.get().lower()
-		if value == '':
-			combo['values'] = lebensmittel_liste
-		else:
-			filtered = [item for item in lebensmittel_liste if value in item.lower()]
-			combo['values'] = filtered
-	combo.bind('<KeyRelease>', on_keyrelease)
-
-	tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
-	menge_var = tk.StringVar(value='100')
-	menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
-	menge_entry.pack(side='left')
-
-	btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
-	btn.pack(side='left', padx=(10,0))
-
-	# + Button nur beim ersten Frame
-	if first:
-		btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
-		btn_add.pack(side='left', padx=(10,0))
-
-	if len(auswahl_frames) > 1:
-		btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
-		btn_remove.pack(side='left', padx=(5,0))
-
-def remove_auswahl_frame(frame):
-	frame.destroy()
-	auswahl_frames.remove(frame)
-
-add_auswahl_frame(first=True)
