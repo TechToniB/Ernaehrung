@@ -81,8 +81,21 @@ def main():
 		settings_win.geometry("300x180")
 		settings_win.grab_set()
 
-		cb_dark = tb.Checkbutton(settings_win, text="Dark Mode aktivieren", variable=var_dark, bootstyle="dark-round-toggle" if dark_mode else "round-toggle")
+
+		# Dark Mode Checkbutton: bei Aktivierung blau hinterlegt (primary-round-toggle)
+		cb_dark = tb.Checkbutton(
+			settings_win,
+			text="Dark Mode aktivieren",
+			variable=var_dark,
+			bootstyle="primary-round-toggle" if var_dark.get() else "round-toggle"
+		)
 		cb_dark.pack(pady=10)
+
+		# Callback, um Stil dynamisch zu ändern
+		def update_dark_style(*_):
+			cb_dark.configure(bootstyle="primary-round-toggle" if var_dark.get() else "round-toggle")
+		var_dark.trace_add('write', update_dark_style)
+
 		cb_full = tb.Checkbutton(settings_win, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
 		cb_full.pack(pady=10)
 
@@ -99,6 +112,11 @@ def main():
 
 	btn_settings = tb.Button(root, text="Einstellungen", command=open_settings, style=btn_style)
 	btn_settings.pack(pady=10, fill='x', padx=40)
+
+
+	# Beenden-Button
+	btn_exit = tb.Button(root, text="Beenden", command=root.destroy, style=btn_style)
+	btn_exit.pack(pady=10, fill='x', padx=40)
 
 	root.mainloop()
 
