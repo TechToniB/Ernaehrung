@@ -48,10 +48,9 @@ def speichere_ergebnisse():
 		children = frame.winfo_children()
 		combo = None
 		menge_entry = None
-		# Finde das Dropdown und das Mengenfeld im Frame
+		# Finde das Dropdown (tb.Combobox) und das Mengenfeld (tb.Entry) im Frame
 		for child in children:
-			# Prüfe auf AutocompleteCombobox und tb.Entry
-			if isinstance(child, AutocompleteCombobox):
+			if isinstance(child, tb.Combobox):
 				combo = child
 			if isinstance(child, tb.Entry):
 				menge_entry = child
@@ -134,7 +133,7 @@ def speichere_ergebnisse():
 	for frame in auswahl_frames:
 		children = frame.winfo_children()
 		for child in children:
-			if isinstance(child, AutocompleteCombobox):
+			if isinstance(child, tb.Combobox):
 				name = child.get()
 				if name and name not in lebensmittel_namen:
 					lebensmittel_namen.append(name)
@@ -385,8 +384,20 @@ def add_auswahl_frame(first=False):
 	frame.pack(padx=0, pady=2, fill='x')
 	auswahl_frames.append(frame)
 
+
+	# Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
 	tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
-	# (AutocompleteCombobox wird bereits verwendet)
+	combo_var = tk.StringVar()
+	combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
+	combo.pack(side='left', padx=(0,10))
+	def on_keyrelease(event):
+		value = combo_var.get().lower()
+		if value == '':
+			combo['values'] = lebensmittel_liste
+		else:
+			filtered = [item for item in lebensmittel_liste if value in item.lower()]
+			combo['values'] = filtered
+	combo.bind('<KeyRelease>', on_keyrelease)
 
 	tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
 	menge_var = tk.StringVar(value='100')
