@@ -72,42 +72,94 @@ frame_zutaten = tk.Frame(root)
 frame_zutaten.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
 
 zutaten_widgets = []
+ergebnis_labels = []  # NEU: Für Ergebnis-Spalte
+
+# Eingabefeld und Button für verwendete Portionen
+label_verwendete = tk.Label(root, text="Verwendete Portionen:")
+label_verwendete.grid(row=2, column=1, padx=10, pady=5, sticky="e")
+entry_verwendete = tk.Entry(root, width=5)
+entry_verwendete.grid(row=2, column=2, padx=10, pady=5, sticky="w")
+entry_verwendete.insert(0, "1")  # Standardwert
+
+def berechne_erg():
+    rezept = combo_rezepte.get()
+    if not rezept or df_rezepte is None:
+        return
+    df_zutaten = df_rezepte[df_rezepte['Rezeptname'] == rezept]
+    if df_zutaten.empty or 'Portionen' not in df_zutaten.columns:
+        return
+    try:
+        verwendete = float(entry_verwendete.get())
+    except Exception:
+        verwendete = 1
+    try:
+        portionen = float(df_zutaten.iloc[0]['Portionen'])  # <-- Korrigiert!
+    except Exception:
+        portionen = 1
+    for idx, row in enumerate(df_zutaten.itertuples(index=False)):
+        menge_zahl = getattr(row, 'Menge_Zahl', '')
+        try:
+            menge_zahl = float(menge_zahl)
+            erg = menge_zahl / portionen * verwendete
+            ergebnis_labels[idx]['text'] = f"{erg:.2f}"
+        except Exception:
+            ergebnis_labels[idx]['text'] = "-"
+
+btn_berechnen = tk.Button(root, text="Berechnen", command=berechne_erg)
+btn_berechnen.grid(row=2, column=3, padx=10, pady=5, sticky="w")
 
 # Funktion zum Anzeigen der Zutaten
 def zeige_zutaten(event=None):
     for widget in frame_zutaten.winfo_children():
         widget.destroy()
     zutaten_widgets.clear()
+    ergebnis_labels.clear()
     rezept = combo_rezepte.get()
     if not rezept or df_rezepte is None:
         return
     df_zutaten = df_rezepte[df_rezepte['Rezeptname'] == rezept]
     # Rezeptname als große Überschrift
-    tk.Label(frame_zutaten, text=rezept, font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 2))
-    # Portionen als kleinere Überschrift (letzte Spalte)
+    tk.Label(frame_zutaten, text=rezept, font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 2))
+    # Portionen als kleinere Überschrift (letzte Spalte, falls vorhanden)
     portionen = None
-    if not df_zutaten.empty:
-        portionen = df_zutaten.iloc[0, -1]  # Wert aus letzter Spalte
+    if not df_zutaten.empty and 'Portionen' in df_zutaten.columns:
+        portionen = df_zutaten.iloc[0]['Portionen']
     if portionen is not None:
-        tk.Label(frame_zutaten, text=f"Portionen: {portionen}", font=("Arial", 12, "bold")).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 5))
+        tk.Label(frame_zutaten, text=f"Portionen: {portionen}", font=("Arial", 12, "bold")).grid(row=1, column=0, columnspan=4, sticky="w", pady=(0, 5))
         start_row = 2
     else:
         start_row = 1
-    # Spaltenüberschriften
-    for i, col in enumerate(['Zutat', 'Menge']):
+    # Spaltenüberschriften (jetzt mit Ergebnis)
+    columns = ['Zutat', 'Menge_Zahl', 'Menge_Einheit', 'Ergebnis']
+    for i, col in enumerate(columns):
         tk.Label(frame_zutaten, text=col, relief="ridge", bg="#e0e0e0").grid(row=start_row, column=i, sticky="nsew")
     # Zutaten und Mengen anzeigen
+    max_lens = [len(col) for col in columns]
     for idx, row in enumerate(df_zutaten.itertuples(index=False), 1):
-        tk.Label(frame_zutaten, text=getattr(row, 'Zutat', ''), relief="ridge").grid(row=start_row + idx, column=0, sticky="nsew")
-        tk.Label(frame_zutaten, text=getattr(row, 'Menge', ''), relief="ridge").grid(row=start_row + idx, column=1, sticky="nsew")
-        zutaten_widgets.append((getattr(row, 'Zutat', ''), getattr(row, 'Menge', '')))
+        zutat = str(getattr(row, 'Zutat', ''))
+        menge_zahl = str(getattr(row, 'Menge_Zahl', ''))
+        menge_einheit = str(getattr(row, 'Menge_Einheit', ''))
+        tk.Label(frame_zutaten, text=zutat, relief="ridge").grid(row=start_row + idx, column=0, sticky="nsew")
+        tk.Label(frame_zutaten, text=menge_zahl, relief="ridge").grid(row=start_row + idx, column=1, sticky="nsew")
+        tk.Label(frame_zutaten, text=menge_einheit, relief="ridge").grid(row=start_row + idx, column=2, sticky="nsew")
+        lbl_erg = tk.Label(frame_zutaten, text="-", relief="ridge")
+        lbl_erg.grid(row=start_row + idx, column=3, sticky="nsew")
+        ergebnis_labels.append(lbl_erg)
+        zutaten_widgets.append((zutat, menge_zahl, menge_einheit))
+        # Für Spaltenbreite
+        max_lens[0] = max(max_lens[0], len(zutat))
+        max_lens[1] = max(max_lens[1], len(menge_zahl))
+        max_lens[2] = max(max_lens[2], len(menge_einheit))
+    # Spaltenbreite anpassen
+    for i, maxlen in enumerate(max_lens):
+        frame_zutaten.grid_columnconfigure(i, minsize=(maxlen+2)*8)  # 8 Pixel pro Zeichen, +2 für Puffer
     # Link anzeigen, falls vorhanden
     link = df_zutaten['Link'].iloc[0] if 'Link' in df_zutaten.columns and not df_zutaten['Link'].isnull().all() else None
     if link:
         def open_link(event):
             webbrowser.open(link)
         link_label = tk.Label(frame_zutaten, text="Zum Rezept", fg="blue", cursor="hand2", underline=True)
-        link_label.grid(row=start_row + idx + 1, column=0, columnspan=2, sticky="w", pady=(10,0))
+        link_label.grid(row=start_row + idx + 1, column=0, columnspan=4, sticky="w", pady=(10,0))
         link_label.bind("<Button-1>", open_link)
 
 combo_rezepte.bind("<<ComboboxSelected>>", zeige_zutaten)
@@ -119,7 +171,33 @@ def speichern_unter():
     if not rezept or not zutaten_widgets:
         messagebox.showerror("Fehler", "Kein Rezept ausgewählt oder keine Zutaten vorhanden.")
         return
-    df_save = pd.DataFrame(zutaten_widgets, columns=['Zutat', 'Menge'])
+    # Ergebniswerte aus Labels holen
+    ergebnisse = [lbl['text'] for lbl in ergebnis_labels]
+    # Portionen-Info holen
+    df_zutaten = df_rezepte[df_rezepte['Rezeptname'] == rezept]
+    portionen = None
+    if not df_zutaten.empty and 'Portionen' in df_zutaten.columns:
+        portionen = df_zutaten.iloc[0]['Portionen']
+    # DataFrame mit Ergebnis-Spalte
+    df_save = pd.DataFrame(
+        [
+            (zutat, menge_zahl, menge_einheit, ergebnis)
+            for (zutat, menge_zahl, menge_einheit), ergebnis in zip(zutaten_widgets, ergebnisse)
+        ],
+        columns=['Zutat', 'Menge_Zahl', 'Menge_Einheit', 'Ergebnis']
+    )
+    # Optional: Portionen und Rezeptname als erste Zeilen einfügen
+    extra_rows = []
+    extra_rows.append(['Rezeptname', rezept, '', '', ''])
+    if portionen is not None:
+        extra_rows.append(['Portionen', portionen, '', '', ''])
+    # Leere Zeile als Trenner
+    extra_rows.append(['', '', '', '', ''])
+    # DataFrame für Zusatzinfos
+    df_extra = pd.DataFrame(extra_rows, columns=['Zutat', 'Menge_Zahl', 'Menge_Einheit', 'Ergebnis', ''])
+    # DataFrames zusammenführen
+    df_final = pd.concat([df_extra, df_save], ignore_index=True)
+    # Datei speichern
     file_path = filedialog.asksaveasfilename(
         defaultextension=".xlsx",
         filetypes=[("Excel-Dateien", "*.xlsx")],
@@ -127,7 +205,7 @@ def speichern_unter():
     )
     if file_path:
         try:
-            df_save.to_excel(file_path, index=False)
+            df_final.to_excel(file_path, index=False)
             messagebox.showinfo("Erfolg", f"Datei gespeichert unter:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
