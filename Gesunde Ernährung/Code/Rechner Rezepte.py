@@ -1,4 +1,3 @@
-
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -46,11 +45,26 @@ root.title('Rezept-Zutaten-Anzeige')
 if fullscreen:
     root.attributes('-fullscreen', True)
 
-# Dropdown für Rezepte
+# Dropdown für Rezepte mit eigener Such-/Filterfunktion
 label_rezept = tk.Label(root, text="Rezept auswählen:")
 label_rezept.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-combo_rezepte = ttk.Combobox(root, values=rezeptnamen, state="readonly")
+
+entry_var = tk.StringVar()
+combo_rezepte = ttk.Combobox(root, textvariable=entry_var, values=rezeptnamen, state="normal")
 combo_rezepte.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+
+def filter_rezepte(event=None):
+    eingabe = entry_var.get().lower()
+    filtered = [r for r in rezeptnamen if eingabe in r.lower()]
+    combo_rezepte['values'] = filtered
+    # Optional: Dropdown öffnen, wenn gefiltert wird
+    if filtered:
+        combo_rezepte.event_generate('<Down>')
+    # Fokus und Cursor ans Ende setzen, damit man weiterschreiben kann
+    combo_rezepte.focus_set()
+    combo_rezepte.icursor(tk.END)
+
+entry_var.trace_add('write', lambda *args: filter_rezepte())
 
 # Frame für Zutatenliste
 frame_zutaten = tk.Frame(root)
