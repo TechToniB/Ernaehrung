@@ -24,20 +24,27 @@ else:
     rezeptnamen = []
 
 
-# Einstellungen laden (Dark Mode, Vollbild)
+
+# --- Einstellungen und Theme-Auswahl wie im Hauptmenü ---
 settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 dark_mode = False
 fullscreen = False
+themename = "flatly"
+available_themes = [
+    "flatly", "darkly", "cyborg", "journal", "solar", "vapor", "morph", "superhero"
+]
 if os.path.exists(settings_path):
     try:
         with open(settings_path, 'r', encoding='utf-8') as f:
             settings = json.load(f)
             dark_mode = settings.get('dark_mode', False)
             fullscreen = settings.get('fullscreen', False)
+            themename = settings.get('themename', "darkly" if dark_mode else "flatly")
+            if themename not in available_themes:
+                themename = "darkly" if dark_mode else "flatly"
     except Exception:
         pass
 
-themename = "darkly" if dark_mode else "flatly"
 try:
     root = tb.Window(themename=themename)
 except Exception:
@@ -74,11 +81,14 @@ frame_zutaten.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew
 zutaten_widgets = []
 ergebnis_labels = []  # NEU: Für Ergebnis-Spalte
 
-# Eingabefeld und Button für verwendete Portionen
-label_verwendete = tk.Label(root, text="Verwendete Portionen:")
-label_verwendete.grid(row=2, column=1, padx=10, pady=5, sticky="e")
-entry_verwendete = tk.Entry(root, width=5)
-entry_verwendete.grid(row=2, column=2, padx=10, pady=5, sticky="w")
+
+# Eingabefeld und Button für verwendete Portionen in einem Frame nebeneinander
+frame_verwendete = tk.Frame(root)
+frame_verwendete.grid(row=2, column=1, columnspan=3, padx=10, pady=5, sticky="w")
+label_verwendete = tk.Label(frame_verwendete, text="Verwendete Portionen:")
+label_verwendete.pack(side="left")
+entry_verwendete = tk.Entry(frame_verwendete, width=5)
+entry_verwendete.pack(side="left", padx=(5, 5))
 entry_verwendete.insert(0, "1")  # Standardwert
 
 def berechne_erg():
@@ -93,7 +103,7 @@ def berechne_erg():
     except Exception:
         verwendete = 1
     try:
-        portionen = float(df_zutaten.iloc[0]['Portionen'])  # <-- Korrigiert!
+        portionen = float(df_zutaten.iloc[0]['Portionen'])
     except Exception:
         portionen = 1
     for idx, row in enumerate(df_zutaten.itertuples(index=False)):
@@ -105,8 +115,8 @@ def berechne_erg():
         except Exception:
             ergebnis_labels[idx]['text'] = "-"
 
-btn_berechnen = tk.Button(root, text="Berechnen", command=berechne_erg)
-btn_berechnen.grid(row=2, column=3, padx=10, pady=5, sticky="w")
+btn_berechnen = tk.Button(frame_verwendete, text="Berechnen", command=berechne_erg)
+btn_berechnen.pack(side="left", padx=(5, 0))
 
 # Funktion zum Anzeigen der Zutaten
 def zeige_zutaten(event=None):

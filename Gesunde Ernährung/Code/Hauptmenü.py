@@ -48,9 +48,13 @@ def open_script(script_name, window_title=None, dark_mode=False):
 # --- Hauptmenü-Logik ---
 def main():
     settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+
     dark_mode = False
     fullscreen = False
     themename = "flatly"
+    available_themes = [
+        "flatly", "darkly", "cyborg", "journal", "solar", "vapor", "morph", "superhero"
+    ]
     if os.path.exists(settings_path):
         try:
             with open(settings_path, 'r', encoding='utf-8') as f:
@@ -58,13 +62,10 @@ def main():
                 dark_mode = settings.get('dark_mode', False)
                 fullscreen = settings.get('fullscreen', False)
                 themename = settings.get('themename', "darkly" if dark_mode else "flatly")
+                if themename not in available_themes:
+                    themename = "darkly" if dark_mode else "flatly"
         except Exception:
             pass
-
-    # Liste der verfügbaren Themes
-    available_themes = [
-        "flatly", "darkly", "cyborg", "journal", "solar", "vapor", "morph", "superhero"
-    ]
 
     print(f"[DEBUG] Lade Theme: {themename}")
     try:

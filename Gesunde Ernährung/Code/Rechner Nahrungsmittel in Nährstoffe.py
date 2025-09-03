@@ -178,13 +178,27 @@ from tkinter import messagebox
 import ttkbootstrap as tb
 import win32gui
 import win32con
+import json
 
-# Dark mode support
-def get_theme():
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--dark', action='store_true')
-	args, _ = parser.parse_known_args()
-	return "darkly" if args.dark else "flatly"
+
+settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+dark_mode = False
+fullscreen = False
+themename = "flatly"
+available_themes = [
+	"flatly", "darkly", "cyborg", "journal", "solar", "vapor", "morph", "superhero"
+]
+if os.path.exists(settings_path):
+	try:
+		with open(settings_path, 'r', encoding='utf-8') as f:
+			settings = json.load(f)
+			dark_mode = settings.get('dark_mode', False)
+			fullscreen = settings.get('fullscreen', False)
+			themename = settings.get('themename', "darkly" if dark_mode else "flatly")
+			if themename not in available_themes:
+				themename = "darkly" if dark_mode else "flatly"
+	except Exception:
+		pass
 
 
 
@@ -214,26 +228,18 @@ except Exception as e:
 
 
 
-# --- GUI erstellen ---
-import os, json
-settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
-fullscreen = False
-if os.path.exists(settings_path):
-	try:
-		with open(settings_path, 'r', encoding='utf-8') as f:
-			settings = json.load(f)
-			fullscreen = settings.get('fullscreen', False)
-	except Exception:
-		pass
+
+
 
 NAEHRSTOFFE_TITLE = 'RechnerNaehrstoffeFenster2025'
-root = tb.Window(themename=get_theme())
+try:
+	root = tb.Window(themename=themename)
+except Exception:
+	root = tk.Tk()
 root.title(NAEHRSTOFFE_TITLE)
-# Fenstergröße anpassen
 root.geometry('800x550')
 if fullscreen:
 	root.attributes('-fullscreen', True)
-# Fenster in den Vordergrund holen
 root.lift()
 root.focus_force()
 
