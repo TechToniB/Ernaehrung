@@ -16,12 +16,22 @@ import win32gui
 import win32con
 import math
 
-# Dark mode support
-def get_theme():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dark', action='store_true')
-    args, _ = parser.parse_known_args()
-    return "darkly" if args.dark else "flatly"
+# Entferne die Funktion get_theme() und füge stattdessen diese Funktion ein:
+def lade_settings():
+    settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+    dark_mode = False
+    fullscreen = False
+    themename = "flatly"
+    if os.path.exists(settings_path):
+        try:
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+                dark_mode = settings.get('dark_mode', False)
+                fullscreen = settings.get('fullscreen', False)
+                themename = settings.get('themename', "darkly" if dark_mode else "flatly")
+        except Exception:
+            pass
+    return dark_mode, fullscreen, themename
 
 # Globale Variablen für die geladene Tabelle und die Eingabefelder
 df_global = None           # Hier wird das aktuell geladene DataFrame gespeichert
@@ -213,21 +223,9 @@ filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" 
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx") if f.is_file()]
 
 # Fenster erstellen mit optionalem Vollbildmodus
-import os
-import json
-settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
-fullscreen = False
-if os.path.exists(settings_path):
-    try:
-        with open(settings_path, 'r', encoding='utf-8') as f:
-            settings = json.load(f)
-            fullscreen = settings.get('fullscreen', False)
-    except Exception:
-        pass
-
-
+dark_mode, fullscreen, themename = lade_settings()
 IMPORT_TITLE = 'RechnerImportFenster2025'
-root = tb.Window(themename=get_theme())
+root = tb.Window(themename=themename)
 root.title(IMPORT_TITLE)
 if fullscreen:
     root.attributes('-fullscreen', True)
@@ -358,8 +356,6 @@ def speichern_unter():
             messagebox.showinfo("Erfolg", f"Datei gespeichert unter:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
-
-# ...existing code...
 
 # Speichern unter-Button
 btn_speichern = tb.Button(root, text="Speichern unter", command=speichern_unter)

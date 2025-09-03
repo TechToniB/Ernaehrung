@@ -238,167 +238,113 @@ root.lift()
 root.focus_force()
 
 
+# --- Hauptfenster --- (ab hier ersetzen!)
+
 # --- Dynamische Auswahlfelder in eigenem Container ---
 auswahl_frames = []
 auswahl_container = tb.Frame(root)
 auswahl_container.pack(padx=10, pady=(10, 0), fill='x')
 
-# Funktion zum Hinzufügen eines neuen Auswahlfeldes (Dropdown + Menge + Buttons)
 def add_auswahl_frame(first=False):
-	frame = tb.Frame(auswahl_container)
-	frame.pack(padx=0, pady=2, fill='x')
-	auswahl_frames.append(frame)
+    frame = tb.Frame(auswahl_container)
+    frame.pack(padx=0, pady=2, fill='x')
+    auswahl_frames.append(frame)
 
+    # Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
+    tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
+    combo_var = tk.StringVar()
+    combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
+    combo.pack(side='left', padx=(0,5))
 
-	# Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
-	tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
-	combo_var = tk.StringVar()
-	combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
-	combo.pack(side='left', padx=(0,10))
+    # + Button immer direkt neben dem ersten Dropdown
+    if first:
+        btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
+        btn_add.pack(side='left', padx=(0,10))
 
-	# Dynamische Filterung beim Tippen
-	def on_keyrelease(event):
-		value = combo_var.get().lower()
-		if value == '':
-			combo['values'] = lebensmittel_liste
-		else:
-			filtered = [item for item in lebensmittel_liste if value in item.lower()]
-			combo['values'] = filtered
-	combo.bind('<KeyRelease>', on_keyrelease)
+    # Dynamische Filterung beim Tippen
+    def on_keyrelease(event):
+        value = combo_var.get().lower()
+        if value == '':
+            combo['values'] = lebensmittel_liste
+        else:
+            filtered = [item for item in lebensmittel_liste if value in item.lower()]
+            combo['values'] = filtered
+    combo.bind('<KeyRelease>', on_keyrelease)
 
+    # Eingabefeld für Menge
+    tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
+    menge_var = tk.StringVar(value='100')
+    menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
+    menge_entry.pack(side='left')
 
-	# Eingabefeld für Menge
-	tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
-	menge_var = tk.StringVar(value='100')
-	menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
-	menge_entry.pack(side='left')
+    # Button für diese Auswahl
+    btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
+    btn.pack(side='left', padx=(10,0))
 
+    # Entfernen-Button für weitere Auswahlfelder
+    if len(auswahl_frames) > 1:
+        btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
+        btn_remove.pack(side='left', padx=(5,0))
 
-	# Button für diese Auswahl
-	btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
-	btn.pack(side='left', padx=(10,0))
-
-	# + Button nur beim ersten Frame
-	if first:
-		btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
-		btn_add.pack(side='left', padx=(10,0))
-
-	# Entfernen-Button für weitere Auswahlfelder
-	if len(auswahl_frames) > 1:
-		btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
-		btn_remove.pack(side='left', padx=(5,0))
-
-# Funktion zum Entfernen eines Auswahlfeldes
 def remove_auswahl_frame(frame):
-	frame.destroy()
-	auswahl_frames.remove(frame)
+    frame.destroy()
+    auswahl_frames.remove(frame)
 
-# Füge das erste Auswahlfeld hinzu
+# Nur das erste Auswahlfeld wird initial hinzugefügt
 add_auswahl_frame(first=True)
 
-
-# Größeres Textfeld für die Ausgabe
-textfeld = tk.Text(root, width=80, height=25, state='disabled', wrap='word')
+# --- Textfeld für die Ausgabe ---
+textfeld = tk.Text(root, width=80, height=20, state='disabled', wrap='word')
 textfeld.pack(padx=10, pady=10, fill='both', expand=True)
 
-# Angepasste Funktion für mehrere Auswahlen
-def zeige_naehrstoffe(combo, menge_var):
-	# Lese die Auswahl und Menge aus dem jeweiligen Frame
-	auswahl = combo.get()
-	menge_str = menge_var.get()
-	try:
-		menge = float(menge_str.replace(',', '.'))
-		if menge <= 0:
-			raise ValueError
-	except Exception:
-		messagebox.showinfo('Hinweis', 'Bitte eine gültige Menge eingeben.')
-		return
-	if not auswahl:
-		messagebox.showinfo('Hinweis', 'Bitte ein Lebensmittel auswählen.')
-		return
-	# Filtere die Zeile für das gewählte Lebensmittel
-	zeile = df[df['Lebensmittel'] == auswahl]
-	if zeile.empty:
-		messagebox.showinfo('Hinweis', 'Keine Daten gefunden.')
-		return
-	spalten = df.columns[2:]
-	infos = []
-	max_spaltenname = 0
-	werte_liste = []
-	# Sammle alle Nährstoffwerte
-	for spalte in spalten:
-		wert = zeile.iloc[0][spalte]
-		if pd.notna(wert):
-			try:
-				if isinstance(wert, (int, float)) and not isinstance(wert, bool):
-					werte_liste.append((spalte, float(wert)))
-				else:
-					float_wert = float(str(wert).replace(',', '.'))
-					werte_liste.append((spalte, float_wert))
-			except (ValueError, TypeError):
-				continue
-	if werte_liste:
-		import re
-		filtered = []
-		werte_dict = {}
-		# Dopplungen filtern: nur den kürzesten Spaltennamen pro Wert behalten
-		for spalte, wert in werte_liste:
-			if pd.isna(wert):
-				continue
-			wert_str = str(wert)
-			if wert_str not in werte_dict:
-				werte_dict[wert_str] = [spalte]
-			else:
-				werte_dict[wert_str].append(spalte)
-		for wert_str, spalten_namen in werte_dict.items():
-			kuerzester = min(spalten_namen, key=len)
-			filtered.append((kuerzester, float(wert_str)))
-		if filtered:
-			sep = '   '
-			max_spaltenname = max(len(str(s[0])) for s in filtered)
-			max_wert = max(len(f"{s[1]:.2f}") for s in filtered)
-			max_berechnet = max(len(f"{s[1]/100*menge:.2f}") for s in filtered)
-			# Kopfzeile und Werte formatiert ausgeben
-			header = f"{'Nährstoff'.ljust(max_spaltenname)}{sep}{'pro 100g'.rjust(max_wert)}{sep}{'für Menge'.rjust(max_berechnet)}"
-			infos.append(header)
-			infos.append('-' * len(header))
-			for spalte, wert in filtered:
-				berechnet = wert / 100 * menge
-				infos.append(f"{spalte.ljust(max_spaltenname)}{sep}{f'{wert:.2f}'.rjust(max_wert)}{sep}{f'{berechnet:.2f}'.rjust(max_berechnet)}")
-	if infos:
-		# Ausgabe für mehrere Auswahlen anhängen
-		textfeld.config(state='normal')
-		textfeld.insert(tk.END, f"\n{auswahl} ({menge}g):\n")
-		textfeld.insert(tk.END, '\n'.join(infos) + '\n')
-		textfeld.config(state='disabled')
-	else:
-		textfeld.config(state='normal')
-		textfeld.insert(tk.END, f"\n{auswahl} ({menge}g): Keine Nährstoffdaten vorhanden.\n")
-		textfeld.config(state='disabled')
-		textfeld.delete('1.0', tk.END)
-		textfeld.insert(tk.END, 'Keine Nährstoffdaten vorhanden.')
-		textfeld.config(state='disabled')
+# --- Buttons unterhalb der Auswahl ---
+frame_buttons_unten = tb.Frame(root)
+frame_buttons_unten.pack(padx=10, pady=5, fill='x')
 
-
-# Buttons nebeneinander in einem Frame
-
-frame_buttons = tb.Frame(root)
-frame_buttons.pack(padx=10, pady=5)
-# Button zum Speichern der Ergebnisse
-btn_save = tb.Button(frame_buttons, text='Ergebnisse speichern', command=speichere_ergebnisse)
+btn_save = tb.Button(frame_buttons_unten, text='Ergebnisse speichern', command=speichere_ergebnisse)
 btn_save.pack(side='left', padx=(0, 10))
-# Button zum Leeren der Ausgabe
-btn_clear = tb.Button(frame_buttons, text='Ausgabe leeren', command=clear_output)
+btn_clear = tb.Button(frame_buttons_unten, text='Ausgabe leeren', command=clear_output)
 btn_clear.pack(side='left', padx=(0, 10))
 
-# Button zum Berechnen der Summen (wird dynamisch ein-/ausgeblendet)
 def sum_button_action():
-	addiere_werte_in_ausgabe()
-	btn_sum.pack_forget()  # Button ausblenden
+    addiere_werte_in_ausgabe()
+    btn_sum.pack_forget()  # Button ausblenden
 
-btn_sum = tb.Button(frame_buttons, text='Summen berechnen', command=sum_button_action)
+btn_sum = tb.Button(frame_buttons_unten, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
+# --- Menüleiste ---
+menue_leiste = tb.Menu(root)
+
+# --- Datei-Menü ---
+def datei_oeffnen():
+	pass  # Hier kann die Funktion zum Öffnen einer Datei implementiert werden
+
+def datei_speichern():
+	speichere_ergebnisse()
+
+def beenden():
+	root.quit()
+
+datei_menu = tb.Menu(menue_leiste, tearoff=0)
+datei_menu.add_command(label="Öffnen", command=datei_oeffnen)
+datei_menu.add_command(label="Speichern", command=datei_speichern)
+datei_menu.add_separator()
+datei_menu.add_command(label="Beenden", command=beenden)
+menue_leiste.add_cascade(label="Datei", menu=datei_menu)
+
+# --- Hilfe-Menü ---
+def hilfe_anzeigen():
+	messagebox.showinfo("Hilfe", "Hier könnte Ihre Hilfe stehen.")
+
+hilfe_menu = tb.Menu(menue_leiste, tearoff=0)
+hilfe_menu.add_command(label="Inhalt", command=hilfe_anzeigen)
+menue_leiste.add_cascade(label="Hilfe", menu=hilfe_menu)
+
+# Menüleiste anwenden
+root.config(menu=menue_leiste)
+
+# --- Hauptmenü-Button ---
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
 	def enumHandler(hwnd, lParam):
 		if win32gui.IsWindowVisible(hwnd):
@@ -418,5 +364,38 @@ frame_hauptmenue.pack(side='bottom', anchor='se', padx=10, pady=10, fill='x')
 btn_hauptmenue = tb.Button(frame_hauptmenue, text='Verlassen', command=zurueck_zum_hauptmenue)
 btn_hauptmenue.pack(anchor='e', side='right')
 
+def zeige_naehrstoffe(combo, menge_var):
+    lebensmittel = combo.get()
+    try:
+        menge = float(menge_var.get().replace(',', '.'))
+    except Exception:
+        menge = 100.0
+    if not lebensmittel or lebensmittel not in df['Lebensmittel'].values:
+        messagebox.showwarning("Hinweis", "Bitte ein gültiges Lebensmittel auswählen.")
+        return
+    zeile = df[df['Lebensmittel'] == lebensmittel]
+    if zeile.empty:
+        messagebox.showwarning("Hinweis", "Keine Daten für dieses Lebensmittel gefunden.")
+        return
+    spalten = df.columns[2:]
+    ergebnis_liste = []
+    for spalte in spalten:
+        wert = zeile.iloc[0][spalte]
+        if pd.notna(wert):
+            try:
+                wert = float(str(wert).replace(',', '.'))
+                berechnet = wert / 100 * menge
+                ergebnis_liste.append(f"{spalte}: {berechnet:.2f}")
+            except Exception:
+                continue
+    # Schreibe ins Textfeld
+    textfeld.config(state='normal')
+    textfeld.insert(tk.END, f"{lebensmittel} ({menge}g):\n")
+    for zeile in ergebnis_liste:
+        textfeld.insert(tk.END, zeile + "\n")
+    textfeld.insert(tk.END, "\n")
+    textfeld.config(state='disabled')
+
+# --- Hauptfenster anzeigen ---
 root.mainloop()
 

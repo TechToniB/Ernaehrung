@@ -75,10 +75,25 @@ def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
                 win32gui.SetForegroundWindow(hwnd)
     win32gui.EnumWindows(enumHandler, None)
 
+def lade_settings():
+    settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+    dark_mode = False
+    fullscreen = False
+    themename = "flatly"
+    if os.path.exists(settings_path):
+        try:
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                settings = json.load(f)
+                dark_mode = settings.get('dark_mode', False)
+                fullscreen = settings.get('fullscreen', False)
+                themename = settings.get('themename', "darkly" if dark_mode else "flatly")
+        except Exception:
+            pass
+    return dark_mode, fullscreen, themename
+
 class SaisonApp:
-    def __init__(self, dark_mode=False, fullscreen=False):
+    def __init__(self, dark_mode=False, fullscreen=False, themename="flatly"):
         # Theme wählen
-        themename = "darkly" if dark_mode and tb else "flatly"
         if tb:
             self.root = tb.Window(themename=themename)
         else:
@@ -159,17 +174,6 @@ class SaisonApp:
         self.root.destroy()
 
 if __name__ == "__main__":
-    # Einstellungen laden
-    settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
-    dark_mode = False
-    fullscreen = False
-    if os.path.exists(settings_path):
-        try:
-            with open(settings_path, 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-                dark_mode = settings.get('dark_mode', False)
-                fullscreen = settings.get('fullscreen', False)
-        except Exception:
-            pass
-    app = SaisonApp(dark_mode=dark_mode, fullscreen=fullscreen)
+    dark_mode, fullscreen, themename = lade_settings()
+    app = SaisonApp(dark_mode=dark_mode, fullscreen=fullscreen, themename=themename)
     app.root.mainloop()
