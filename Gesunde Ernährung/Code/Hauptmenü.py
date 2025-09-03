@@ -134,6 +134,7 @@ def main():
 		for text, cmd in [
 			("Rechner Import", lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE, dark_mode=dark_mode)),
 			("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
+			("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
 			("Einstellungen", open_settings),
 			("Beenden", root.destroy)
 		]:
@@ -147,6 +148,7 @@ def main():
 		for text, cmd in [
 			("Rechner Import", lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE, dark_mode=dark_mode)),
 			("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
+			("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
 			("Einstellungen", open_settings),
 			("Beenden", root.destroy)
 		]:
