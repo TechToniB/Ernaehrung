@@ -1,5 +1,3 @@
-
-
 import tkinter as tk
 import subprocess
 import os
@@ -128,16 +126,20 @@ def main():
 		btn_save = tb.Button(settings_win, text="Speichern", command=save_settings, style=btn_style)
 		btn_save.pack(pady=10)
 
+	# Füge diese Zeile zu deiner Button-Liste hinzu (vor "Einstellungen"):
+	button_list = [
+		("Rechner Import", lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE, dark_mode=dark_mode)),
+		("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
+		("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
+		("Saisonkalender", lambda: open_script('Zusammenführung der Saisonkalender.py', window_title="Saisonkalender Tabelle", dark_mode=dark_mode)),  # <-- NEU
+		("Einstellungen", open_settings),
+		("Beenden", root.destroy)
+	]
+
 	if fullscreen:
-		btn_frame = tk.Frame(root, bg='red')  # Test: Hintergrundfarbe sichtbar?
+		btn_frame = tk.Frame(root, bg='red')
 		btn_frame.pack(side='top', expand=True, fill='both')
-		for text, cmd in [
-			("Rechner Import", lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE, dark_mode=dark_mode)),
-			("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
-			("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
-			("Einstellungen", open_settings),
-			("Beenden", root.destroy)
-		]:
+		for text, cmd in button_list:
 			try:
 				btn = tb.Button(btn_frame, text=text, command=cmd, style=btn_style)
 				btn.pack(fill='x', pady=10)
@@ -145,13 +147,7 @@ def main():
 			except Exception as e:
 				print(f"[ERROR] Button '{text}' konnte nicht erzeugt werden: {e}")
 	else:
-		for text, cmd in [
-			("Rechner Import", lambda: open_script('Rechner Import.py', window_title=IMPORT_TITLE, dark_mode=dark_mode)),
-			("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
-			("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
-			("Einstellungen", open_settings),
-			("Beenden", root.destroy)
-		]:
+		for text, cmd in button_list:
 			try:
 				btn = tb.Button(root, text=text, command=cmd, style=btn_style)
 				btn.pack(pady=10, fill='x', padx=40)
