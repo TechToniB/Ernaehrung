@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import json
 import ttkbootstrap as tb
+import webbrowser
 
 # Excel-Datei Pfad (angepasst)
 REZEPTE_DATEI = Path(__file__).parent.parent / 'Quellen' / 'Scraper' / 'rezepte_gefiltert.xlsx'
@@ -81,14 +82,33 @@ def zeige_zutaten(event=None):
     if not rezept or df_rezepte is None:
         return
     df_zutaten = df_rezepte[df_rezepte['Rezeptname'] == rezept]
+    # Rezeptname als große Überschrift
+    tk.Label(frame_zutaten, text=rezept, font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 2))
+    # Portionen als kleinere Überschrift (letzte Spalte)
+    portionen = None
+    if not df_zutaten.empty:
+        portionen = df_zutaten.iloc[0, -1]  # Wert aus letzter Spalte
+    if portionen is not None:
+        tk.Label(frame_zutaten, text=f"Portionen: {portionen}", font=("Arial", 12, "bold")).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 5))
+        start_row = 2
+    else:
+        start_row = 1
     # Spaltenüberschriften
     for i, col in enumerate(['Zutat', 'Menge']):
-        tk.Label(frame_zutaten, text=col, relief="ridge", bg="#e0e0e0").grid(row=0, column=i, sticky="nsew")
+        tk.Label(frame_zutaten, text=col, relief="ridge", bg="#e0e0e0").grid(row=start_row, column=i, sticky="nsew")
     # Zutaten und Mengen anzeigen
     for idx, row in enumerate(df_zutaten.itertuples(index=False), 1):
-        tk.Label(frame_zutaten, text=getattr(row, 'Zutat', ''), relief="ridge").grid(row=idx, column=0, sticky="nsew")
-        tk.Label(frame_zutaten, text=getattr(row, 'Menge', ''), relief="ridge").grid(row=idx, column=1, sticky="nsew")
+        tk.Label(frame_zutaten, text=getattr(row, 'Zutat', ''), relief="ridge").grid(row=start_row + idx, column=0, sticky="nsew")
+        tk.Label(frame_zutaten, text=getattr(row, 'Menge', ''), relief="ridge").grid(row=start_row + idx, column=1, sticky="nsew")
         zutaten_widgets.append((getattr(row, 'Zutat', ''), getattr(row, 'Menge', '')))
+    # Link anzeigen, falls vorhanden
+    link = df_zutaten['Link'].iloc[0] if 'Link' in df_zutaten.columns and not df_zutaten['Link'].isnull().all() else None
+    if link:
+        def open_link(event):
+            webbrowser.open(link)
+        link_label = tk.Label(frame_zutaten, text="Zum Rezept", fg="blue", cursor="hand2", underline=True)
+        link_label.grid(row=start_row + idx + 1, column=0, columnspan=2, sticky="w", pady=(10,0))
+        link_label.bind("<Button-1>", open_link)
 
 combo_rezepte.bind("<<ComboboxSelected>>", zeige_zutaten)
 
