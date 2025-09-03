@@ -78,6 +78,8 @@ def main():
     if fullscreen:
         root.attributes('-fullscreen', True)
 
+        root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
+
     var_dark = tk.BooleanVar(value=dark_mode)
     var_fullscreen = tk.BooleanVar(value=fullscreen)
     var_theme = tk.StringVar(value=themename)

@@ -86,28 +86,13 @@ def speichere_ergebnisse():
 					continue
 		if not werte_liste:
 			continue
-		# Dopplungen filtern wie in der Anzeige
-		import re
-		filtered = []
-		werte_dict = {}
-		for spalte, wert in werte_liste:
-			if pd.isna(wert):
-				continue
-			wert_str = str(wert)
-			if wert_str not in werte_dict:
-				werte_dict[wert_str] = [spalte]
-			else:
-				werte_dict[wert_str].append(spalte)
-		for wert_str, spalten_namen in werte_dict.items():
-			kuerzester = min(spalten_namen, key=len)
-			filtered.append((kuerzester, float(wert_str)))
-		# Berechne die Werte für die gewählte Menge
+		# Nur Werte direkt aus der Tabelle übernehmen, keine Dopplungs-Filterung
 		ergebnis_liste = []
-		for spalte, wert in filtered:
+		for spalte, wert in werte_liste:
 			berechnet = wert / 100 * menge
 			ergebnis_liste.append(f"{spalte}: {berechnet:.2f}")
 		if ergebnis_liste:
-			alle_ergebnisse.append(f"{auswahl} ({menge}g):\n" + '\n'.join(ergebnis_liste) + '\n')
+			alle_ergebnisse.append(f"{auswahl} ({menge}g):\n" + '\\n'.join(ergebnis_liste) + '\n')
 	if not alle_ergebnisse:
 		messagebox.showinfo('Hinweis', 'Keine berechneten Werte zum Speichern.')
 		return
@@ -232,6 +217,7 @@ except Exception as e:
 
 
 NAEHRSTOFFE_TITLE = 'RechnerNaehrstoffeFenster2025'
+
 try:
 	root = tb.Window(themename=themename)
 except Exception:
@@ -240,6 +226,8 @@ root.title(NAEHRSTOFFE_TITLE)
 root.geometry('800x550')
 if fullscreen:
 	root.attributes('-fullscreen', True)
+	root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
+	root.config(menu='')  # Entfernt die Menüleiste im Vollbildmodus
 root.lift()
 root.focus_force()
 
@@ -262,11 +250,6 @@ def add_auswahl_frame(first=False):
     combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
     combo.pack(side='left', padx=(0,5))
 
-    # + Button immer direkt neben dem ersten Dropdown
-    if first:
-        btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
-        btn_add.pack(side='left', padx=(0,10))
-
     # Dynamische Filterung beim Tippen
     def on_keyrelease(event):
         value = combo_var.get().lower()
@@ -286,6 +269,11 @@ def add_auswahl_frame(first=False):
     # Button für diese Auswahl
     btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
     btn.pack(side='left', padx=(10,0))
+
+    # + Button jetzt rechts neben "Nährstoffe anzeigen"
+    if first:
+        btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
+        btn_add.pack(side='left', padx=(10,0))
 
     # Entfernen-Button für weitere Auswahlfelder
     if len(auswahl_frames) > 1:
@@ -319,36 +307,38 @@ def sum_button_action():
 btn_sum = tb.Button(frame_buttons_unten, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
-# --- Menüleiste ---
-menue_leiste = tb.Menu(root)
 
-# --- Datei-Menü ---
-def datei_oeffnen():
-	pass  # Hier kann die Funktion zum Öffnen einer Datei implementiert werden
+# --- Menüleiste nur anzeigen, wenn nicht fullscreen ---
+if not fullscreen:
+	menue_leiste = tb.Menu(root)
 
-def datei_speichern():
-	speichere_ergebnisse()
+	# --- Datei-Menü ---
+	def datei_oeffnen():
+		pass  # Hier kann die Funktion zum Öffnen einer Datei implementiert werden
 
-def beenden():
-	root.quit()
+	def datei_speichern():
+		speichere_ergebnisse()
 
-datei_menu = tb.Menu(menue_leiste, tearoff=0)
-datei_menu.add_command(label="Öffnen", command=datei_oeffnen)
-datei_menu.add_command(label="Speichern", command=datei_speichern)
-datei_menu.add_separator()
-datei_menu.add_command(label="Beenden", command=beenden)
-menue_leiste.add_cascade(label="Datei", menu=datei_menu)
+	def beenden():
+		root.quit()
 
-# --- Hilfe-Menü ---
-def hilfe_anzeigen():
-	messagebox.showinfo("Hilfe", "Hier könnte Ihre Hilfe stehen.")
+	datei_menu = tb.Menu(menue_leiste, tearoff=0)
+	datei_menu.add_command(label="Öffnen", command=datei_oeffnen)
+	datei_menu.add_command(label="Speichern", command=datei_speichern)
+	datei_menu.add_separator()
+	datei_menu.add_command(label="Beenden", command=beenden)
+	menue_leiste.add_cascade(label="Datei", menu=datei_menu)
 
-hilfe_menu = tb.Menu(menue_leiste, tearoff=0)
-hilfe_menu.add_command(label="Inhalt", command=hilfe_anzeigen)
-menue_leiste.add_cascade(label="Hilfe", menu=hilfe_menu)
+	# --- Hilfe-Menü ---
+	def hilfe_anzeigen():
+		messagebox.showinfo("Hilfe", "Hier könnte Ihre Hilfe stehen.")
 
-# Menüleiste anwenden
-root.config(menu=menue_leiste)
+	hilfe_menu = tb.Menu(menue_leiste, tearoff=0)
+	hilfe_menu.add_command(label="Inhalt", command=hilfe_anzeigen)
+	menue_leiste.add_cascade(label="Hilfe", menu=hilfe_menu)
+
+	# Menüleiste anwenden
+	root.config(menu=menue_leiste)
 
 # --- Hauptmenü-Button ---
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
@@ -371,36 +361,48 @@ btn_hauptmenue = tb.Button(frame_hauptmenue, text='Verlassen', command=zurueck_z
 btn_hauptmenue.pack(anchor='e', side='right')
 
 def zeige_naehrstoffe(combo, menge_var):
-    lebensmittel = combo.get()
-    try:
-        menge = float(menge_var.get().replace(',', '.'))
-    except Exception:
-        menge = 100.0
-    if not lebensmittel or lebensmittel not in df['Lebensmittel'].values:
-        messagebox.showwarning("Hinweis", "Bitte ein gültiges Lebensmittel auswählen.")
-        return
-    zeile = df[df['Lebensmittel'] == lebensmittel]
-    if zeile.empty:
-        messagebox.showwarning("Hinweis", "Keine Daten für dieses Lebensmittel gefunden.")
-        return
-    spalten = df.columns[2:]
-    ergebnis_liste = []
-    for spalte in spalten:
-        wert = zeile.iloc[0][spalte]
-        if pd.notna(wert):
-            try:
-                wert = float(str(wert).replace(',', '.'))
-                berechnet = wert / 100 * menge
-                ergebnis_liste.append(f"{spalte}: {berechnet:.2f}")
-            except Exception:
-                continue
-    # Schreibe ins Textfeld
-    textfeld.config(state='normal')
-    textfeld.insert(tk.END, f"{lebensmittel} ({menge}g):\n")
-    for zeile in ergebnis_liste:
-        textfeld.insert(tk.END, zeile + "\n")
-    textfeld.insert(tk.END, "\n")
-    textfeld.config(state='disabled')
+	lebensmittel = combo.get()
+	try:
+		menge = float(menge_var.get().replace(',', '.'))
+	except Exception:
+		menge = 100.0
+	if not lebensmittel or lebensmittel not in df['Lebensmittel'].values:
+		messagebox.showwarning("Hinweis", "Bitte ein gültiges Lebensmittel auswählen.")
+		return
+	zeile = df[df['Lebensmittel'] == lebensmittel]
+	if zeile.empty:
+		messagebox.showwarning("Hinweis", "Keine Daten für dieses Lebensmittel gefunden.")
+		return
+	spalten = df.columns[2:]
+	ergebnis_liste = []
+	used_names = set()
+	def base_name(name):
+		# Nur der Teil vor erstem '_' oder erstem ' (' oder erstem ':'
+		for sep in ['_', ' (', ':']:
+			if sep in name:
+				return name.split(sep)[0].strip()
+		return name.strip()
+	for spalte in spalten:
+		spaltenname = str(spalte).strip()
+		base = base_name(spaltenname)
+		if base in used_names:
+			continue
+		wert = zeile.iloc[0][spalte]
+		if pd.notna(wert):
+			try:
+				wert = float(str(wert).replace(',', '.'))
+				berechnet = wert / 100 * menge
+				ergebnis_liste.append(f"{spaltenname}: {berechnet:.2f}")
+				used_names.add(base)
+			except Exception:
+				continue
+	# Schreibe ins Textfeld
+	textfeld.config(state='normal')
+	textfeld.insert(tk.END, f"{lebensmittel} ({menge}g):\n")
+	for zeile in ergebnis_liste:
+		textfeld.insert(tk.END, zeile + "\n")
+	textfeld.insert(tk.END, "\n")
+	textfeld.config(state='disabled')
 
 # --- Hauptfenster anzeigen ---
 root.mainloop()
