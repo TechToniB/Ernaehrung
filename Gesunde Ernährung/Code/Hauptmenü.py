@@ -96,48 +96,54 @@ def main():
 
     def open_settings():
         settings_win = tb.Toplevel(root)
-        settings_win.overrideredirect(True)
-        win_w, win_h = 300, 240
+        settings_win.overrideredirect(True)  # Entfernt Menüleiste/Fensterrahmen
+        win_w, win_h = 400, 250
         settings_win.update_idletasks()
         screen_w = settings_win.winfo_screenwidth()
         screen_h = settings_win.winfo_screenheight()
         x = (screen_w // 2) - (win_w // 2)
         y = (screen_h // 2) - (win_h // 2)
         settings_win.geometry(f"{win_w}x{win_h}+{x}+{y}")
+        settings_win.resizable(False, False)
         settings_win.grab_set()
-
-        frame_top = tk.Frame(settings_win, bg="#111", height=32)
-        frame_top.pack(fill="x", side="top")
-        label_title = tk.Label(frame_top, text="Einstellungen", bg="#111", fg="white", font=("Arial", 12, "bold"))
-        label_title.pack(side="top", pady=4)
-
-        cb_dark = tb.Checkbutton(
-            settings_win,
-            text="Dark Mode aktivieren",
-            variable=var_dark,
-            bootstyle="primary-round-toggle" if var_dark.get() else "round-toggle"
-        )
-        cb_dark.pack(pady=6)
-
-        def update_dark_style(*args):
-            cb_dark.configure(bootstyle="primary-round-toggle" if var_dark.get() else "round-toggle")
-        var_dark.trace_add('write', update_dark_style)
 
         cb_full = tb.Checkbutton(settings_win, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
         cb_full.pack(pady=6)
 
+        # Theme-Name zu Modus (Dark/Light) zuordnen
+        theme_modes = {
+            "darkly": " (Dark)",
+            "superhero": " (Dark)",
+            "cyborg": " (Dark)",
+            "solar": " (Dark)",
+            "vapor": " (Dark)",
+            "flatly": " (Light)",
+            "journal": " (Light)",
+            "litera": " (Light)",
+            "lumen": " (Light)",
+            "minty": " (Light)",
+            "morph": " (Light)",
+            "pulse": " (Light)",
+            "sandstone": " (Light)",
+            "united": " (Light)",
+            "yeti": " (Light)"
+        }
+
         # Theme-Auswahl
         label_theme = tb.Label(settings_win, text="Theme auswählen:")
         label_theme.pack(pady=(10, 0))
-        theme_combo = tb.Combobox(settings_win, values=available_themes, textvariable=var_theme, state="readonly")
+        theme_names = [name + theme_modes.get(name, "") for name in available_themes]
+        theme_combo = tb.Combobox(settings_win, values=theme_names, textvariable=var_theme, state="readonly")
         theme_combo.pack(pady=4)
 
         def save_settings():
+            # Nur den reinen Theme-Namen speichern
+            selected_theme = theme_combo.get().split()[0]
             with open(settings_path, 'w', encoding='utf-8') as f:
                 json.dump({
-                    'dark_mode': var_dark.get(),
+                    'dark_mode': 'dark' in selected_theme,
                     'fullscreen': var_fullscreen.get(),
-                    'themename': var_theme.get()
+                    'themename': selected_theme
                 }, f)
             settings_win.destroy()
             root.destroy()
