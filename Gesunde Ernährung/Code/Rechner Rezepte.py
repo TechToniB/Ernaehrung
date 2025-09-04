@@ -1,3 +1,4 @@
+
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -6,6 +7,12 @@ import os
 import json
 import ttkbootstrap as tb
 import webbrowser
+try:
+    import win32gui
+    import win32con
+except ImportError:
+    win32gui = None
+    win32con = None
 
 # Excel-Datei Pfad (angepasst)
 REZEPTE_DATEI = Path(__file__).parent.parent / 'Quellen' / 'Scraper' / 'rezepte_gefiltert.xlsx'
@@ -224,6 +231,22 @@ def speichern_unter():
 btn_speichern = tk.Button(root, text="Speichern unter", command=speichern_unter)
 btn_speichern.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
+
+# Funktion, um das Hauptmenü in den Vordergrund zu bringen und dann das Fenster zu schließen
+def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
+    if win32gui is None:
+        return
+    def enumHandler(hwnd, lParam):
+        if win32gui.IsWindowVisible(hwnd):
+            if window_title in win32gui.GetWindowText(hwnd):
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.SetForegroundWindow(hwnd)
+    win32gui.EnumWindows(enumHandler, None)
+
+def zurueck_zum_hauptmenue():
+    bring_hauptmenue_to_front()
+    root.destroy()
+
 # Verlassen Button unten rechts in eigenem Frame
 GRID_LAST_ROW = 100
 GRID_LAST_COL = 2
@@ -231,7 +254,7 @@ root.grid_rowconfigure(GRID_LAST_ROW, weight=1)
 root.grid_columnconfigure(GRID_LAST_COL, weight=1)
 frame_verlassen = tk.Frame(root)
 frame_verlassen.grid(row=GRID_LAST_ROW, column=GRID_LAST_COL, sticky="se", padx=10, pady=10)
-btn_verlassen = tk.Button(frame_verlassen, text="Verlassen", command=root.destroy)
+btn_verlassen = tk.Button(frame_verlassen, text="Verlassen", command=zurueck_zum_hauptmenue)
 btn_verlassen.pack(anchor='e', side='right')
 
 root.mainloop()

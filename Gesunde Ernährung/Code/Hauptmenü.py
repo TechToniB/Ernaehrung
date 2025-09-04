@@ -149,8 +149,13 @@ def main():
             root.destroy()
             subprocess.Popen([sys.executable, os.path.abspath(__file__)])
 
-        btn_save = tb.Button(settings_win, text="Speichern", command=save_settings, style=btn_style)
-        btn_save.pack(pady=10)
+        # Button-Frame für Speichern und Zurück
+        btn_frame = tb.Frame(settings_win)
+        btn_frame.pack(pady=10)
+        btn_save = tb.Button(btn_frame, text="Speichern", command=save_settings, style=btn_style)
+        btn_save.pack(side="left", padx=(0, 10))
+        btn_back = tb.Button(btn_frame, text="Zurück", command=settings_win.destroy, style=btn_style)
+        btn_back.pack(side="left")
 
     # Füge diese Zeile zu deiner Button-Liste hinzu (vor "Einstellungen"):
     button_list = [
