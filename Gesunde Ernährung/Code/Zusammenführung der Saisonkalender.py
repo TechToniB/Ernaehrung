@@ -141,15 +141,23 @@ class SaisonApp:
         # Tabelle leeren
         for row in self.tree.get_children():
             self.tree.delete(row)
-        # Spalten anpassen
+
+        # Spalten und Überschriften komplett zurücksetzen
+        for col in self.tree["columns"]:
+            self.tree.heading(col, text="")
+        self.tree["displaycolumns"] = ()
+        self.tree["columns"] = ()
+
+        # Neue Spalten setzen
         if kalender == "ALLE":
-            self.tree["columns"] = ("Gemüse/Obst", "Monate", "Kalender")
-            for col in ("Gemüse/Obst", "Monate", "Kalender"):
-                self.tree.heading(col, text=col)
+            new_cols = ("Gemüse/Obst", "Monate", "Kalender")
         else:
-            self.tree["columns"] = ("Gemüse/Obst", "Monate")
-            for col in ("Gemüse/Obst", "Monate"):
-                self.tree.heading(col, text=col)
+            new_cols = ("Gemüse/Obst", "Monate")
+        self.tree["columns"] = new_cols
+        self.tree["displaycolumns"] = new_cols
+        for col in new_cols:
+            self.tree.heading(col, text=col)
+
         # Neue Daten einfügen
         for _, row in self.df.iterrows():
             if kalender == "ALLE":
