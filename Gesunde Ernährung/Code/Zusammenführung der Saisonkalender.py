@@ -165,6 +165,17 @@ class SaisonApp:
             else:
                 self.tree.insert("", "end", values=(row["Gemüse/Obst"], row["Monate"]))
 
+        # Nach dem Einfügen der Daten explizit das Fenster und Treeview updaten
+        self.root.update_idletasks()
+
+        # Spaltenbreiten automatisch anpassen (besonders wichtig im Vollbildmodus)
+        total_width = self.tree.winfo_width()
+        num_cols = len(self.tree["columns"])
+        if num_cols > 0 and total_width > 0:
+            col_width = int(total_width / num_cols)
+            for col in self.tree["columns"]:
+                self.tree.column(col, width=col_width)
+
     def speichern(self):
         if self.df is None or self.df.empty:
             messagebox.showinfo("Hinweis", "Keine Daten zum Speichern.")
