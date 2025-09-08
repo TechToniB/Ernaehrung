@@ -1,6 +1,5 @@
 import os
 import importlib.util
-import pandas as pd
 import tkinter as tk
 from tkinter import ttk
 import json
@@ -36,14 +35,22 @@ def lade_kalenderdaten():
             erlaubte_werte = ["1", "2", "3"] if laden == "REWE" else ["1"]
             variablen = lade_variablen(pfad)
             for name, werte in variablen.items():
+                # Bestimme die ersten und letzten Monate der Verfügbarkeit
+                verfuegbare_monate = [idx for idx, wert in enumerate(werte) if wert in erlaubte_werte]
+                if verfuegbare_monate:
+                    erster_monat = MONATE[min(verfuegbare_monate)]
+                    letzter_monat = MONATE[max(verfuegbare_monate)]
+                else:
+                    erster_monat = ""
+                    letzter_monat = ""
                 for idx, wert in enumerate(werte):
                     if wert in erlaubte_werte:
                         monat = MONATE[idx]
                         if name not in produkte:
-                            produkte[name] = {}
-                        if monat not in produkte[name]:
-                            produkte[name][monat] = set()
-                        produkte[name][monat].add(laden)
+                            produkte[name] = {"Monate": {}, "Verfuegbar_von": erster_monat, "Verfuegbar_bis": letzter_monat}
+                        if monat not in produkte[name]["Monate"]:
+                            produkte[name]["Monate"][monat] = set()
+                        produkte[name]["Monate"][monat].add(laden)
     return produkte
 
 def lade_settings():
@@ -74,27 +81,27 @@ class MonatsauswahlApp:
             self.root.attributes('-fullscreen', True)
         self.produkte = lade_kalenderdaten()
 
-        label = ttk.Label(self.root, text="Monat auswählen:")
-        label.pack(pady=10)
+        # Gemeinsamer horizontaler Frame für Dropdown, Suchleiste und Kontrollkästchen
+        top_frame = tk.Frame(self.root)
+        top_frame.pack(fill="x", pady=10)
+
+        label = ttk.Label(top_frame, text="Monat auswählen:")
+        label.pack(side="left", padx=5)
         self.monat_var = tk.StringVar(value=MONATE[0])
-        self.monat_dropdown = ttk.Combobox(self.root, values=MONATE, textvariable=self.monat_var, state="readonly")
-        self.monat_dropdown.pack(pady=5)
+        self.monat_dropdown = ttk.Combobox(top_frame, values=MONATE, textvariable=self.monat_var, state="readonly")
+        self.monat_dropdown.pack(side="left", padx=5)
         self.monat_dropdown.bind("<<ComboboxSelected>>", self.zeige_produkte)
 
-        # Suchleiste
-        such_frame = tk.Frame(self.root)
-        such_frame.pack(pady=5)
-        such_label = ttk.Label(such_frame, text="Suche Produkt:")
-        such_label.pack(side="left")
+        such_label = ttk.Label(top_frame, text="Suche Produkt:")
+        such_label.pack(side="left", padx=5)
         self.such_var = tk.StringVar()
-        self.such_entry = ttk.Entry(such_frame, textvariable=self.such_var)
+        self.such_entry = ttk.Entry(top_frame, textvariable=self.such_var)
         self.such_entry.pack(side="left", padx=5)
         self.such_entry.bind('<KeyRelease>', self.zeige_produkte)
 
-        self.tree = ttk.Treeview(self.root, columns=("Produkt", "Laden"), show="headings")
-        self.tree.heading("Produkt", text="Produkt")
-        self.tree.heading("Laden", text="Verfügbar bei")
-        self.tree.pack(expand=True, fill="both", padx=10, pady=10)
+        self.show_extra_columns = tk.BooleanVar(value=False)
+        cb = ttk.Checkbutton(top_frame, text="Zeige Verfügbarkeits-Spalten", variable=self.show_extra_columns, command=self.update_tree_columns)
+        cb.pack(side="left", padx=5)
 
         # Zurück-Button unten rechts
         frame_verlassen = tk.Frame(self.root)
@@ -102,6 +109,23 @@ class MonatsauswahlApp:
         btn_verlassen = ttk.Button(frame_verlassen, text='Zurück', command=self.zurueck_zum_hauptmenue)
         btn_verlassen.pack(anchor='e', side='right')
 
+        # Treeview initial nur mit 2 Spalten
+        self.tree = ttk.Treeview(self.root, columns=("Produkt", "Laden"), show="headings")
+        self.tree.heading("Produkt", text="Produkt")
+        self.tree.heading("Laden", text="Verfügbar bei")
+        self.tree.pack(expand=True, fill="both", padx=10, pady=10)
+
+        self.zeige_produkte()
+
+    def update_tree_columns(self):
+        # Spalten dynamisch anpassen
+        if self.show_extra_columns.get():
+            new_cols = ("Produkt", "Laden", "Verfügbar von", "Verfügbar bis")
+        else:
+            new_cols = ("Produkt", "Laden")
+        self.tree.config(columns=new_cols)
+        for col in new_cols:
+            self.tree.heading(col, text=col)
         self.zeige_produkte()
 
     def zeige_produkte(self, event=None):
@@ -111,12 +135,19 @@ class MonatsauswahlApp:
         for row in self.tree.get_children():
             self.tree.delete(row)
         # Produkte für den Monat finden und nach Suchtext filtern
-        for produkt, monate_dict in self.produkte.items():
+        show_extra = self.show_extra_columns.get() if hasattr(self, 'show_extra_columns') else False
+        for produkt, daten in self.produkte.items():
+            monate_dict = daten["Monate"]
             if monat in monate_dict:
                 if suchtext and suchtext not in produkt.lower():
                     continue
                 laden = ", ".join(sorted(monate_dict[monat]))
-                self.tree.insert("", "end", values=(produkt, laden))
+                if show_extra:
+                    verfuegbar_von = daten["Verfuegbar_von"]
+                    verfuegbar_bis = daten["Verfuegbar_bis"]
+                    self.tree.insert("", "end", values=(produkt, laden, verfuegbar_von, verfuegbar_bis))
+                else:
+                    self.tree.insert("", "end", values=(produkt, laden))
         self.root.update_idletasks()
 
     def bring_hauptmenue_to_front(self, window_title='MeinErnaehrungsHauptmenue2025'):
