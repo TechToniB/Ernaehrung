@@ -10,6 +10,13 @@ try:
 except ImportError:
     tb = None
 
+try:
+    import win32gui
+    import win32con
+except ImportError:
+    win32gui = None
+    win32con = None
+
 ORDNER = os.path.join(os.path.dirname(__file__), "Saisonklaender")
 MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"]
 
@@ -74,6 +81,16 @@ class MonatsauswahlApp:
         self.monat_dropdown.pack(pady=5)
         self.monat_dropdown.bind("<<ComboboxSelected>>", self.zeige_produkte)
 
+        # Suchleiste
+        such_frame = tk.Frame(self.root)
+        such_frame.pack(pady=5)
+        such_label = ttk.Label(such_frame, text="Suche Produkt:")
+        such_label.pack(side="left")
+        self.such_var = tk.StringVar()
+        self.such_entry = ttk.Entry(such_frame, textvariable=self.such_var)
+        self.such_entry.pack(side="left", padx=5)
+        self.such_entry.bind('<KeyRelease>', self.zeige_produkte)
+
         self.tree = ttk.Treeview(self.root, columns=("Produkt", "Laden"), show="headings")
         self.tree.heading("Produkt", text="Produkt")
         self.tree.heading("Laden", text="Verfügbar bei")
@@ -82,22 +99,39 @@ class MonatsauswahlApp:
         # Zurück-Button unten rechts
         frame_verlassen = tk.Frame(self.root)
         frame_verlassen.pack(side='bottom', anchor='se', padx=10, pady=10, fill='x')
-        btn_verlassen = ttk.Button(frame_verlassen, text='Zurück', command=self.root.destroy)
+        btn_verlassen = ttk.Button(frame_verlassen, text='Zurück', command=self.zurueck_zum_hauptmenue)
         btn_verlassen.pack(anchor='e', side='right')
 
         self.zeige_produkte()
 
     def zeige_produkte(self, event=None):
         monat = self.monat_var.get()
+        suchtext = self.such_var.get().strip().lower()
         # Tabelle leeren
         for row in self.tree.get_children():
             self.tree.delete(row)
-        # Produkte für den Monat finden
+        # Produkte für den Monat finden und nach Suchtext filtern
         for produkt, monate_dict in self.produkte.items():
             if monat in monate_dict:
+                if suchtext and suchtext not in produkt.lower():
+                    continue
                 laden = ", ".join(sorted(monate_dict[monat]))
                 self.tree.insert("", "end", values=(produkt, laden))
         self.root.update_idletasks()
+
+    def bring_hauptmenue_to_front(self, window_title='MeinErnaehrungsHauptmenue2025'):
+        if win32gui is None:
+            return
+        def enumHandler(hwnd, lParam):
+            if win32gui.IsWindowVisible(hwnd):
+                if window_title in win32gui.GetWindowText(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    win32gui.SetForegroundWindow(hwnd)
+        win32gui.EnumWindows(enumHandler, None)
+
+    def zurueck_zum_hauptmenue(self):
+        self.bring_hauptmenue_to_front()
+        self.root.destroy()
 
 if __name__ == "__main__":
     dark_mode, fullscreen, themename = lade_settings()
