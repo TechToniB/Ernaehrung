@@ -163,6 +163,7 @@ def main():
         ("Rechner Nahrungsmittel in Nährstoffe", lambda: open_script('Rechner Nahrungsmittel in Nährstoffe.py', window_title=NAEHRSTOFFE_TITLE, dark_mode=dark_mode)),
         ("Gerichte", lambda: open_script('Rechner Rezepte.py', window_title="RechnerRezepteFenster2025", dark_mode=dark_mode)),
         ("Saisonkalender", lambda: open_script('Zusammenführung der Saisonkalender.py', window_title="Saisonkalender Tabelle", dark_mode=dark_mode)),  # <-- NEU
+        ("Saisonkalender Monatsauswahl", lambda: open_script('Saisonkalender_Monatsauswahl.py', window_title="Saisonkalender Monatsauswahl", dark_mode=dark_mode)),
         ("Einstellungen", open_settings),
         ("Beenden", root.destroy)
     ]
