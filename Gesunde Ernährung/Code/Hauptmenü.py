@@ -107,7 +107,11 @@ def main():
         settings_win.resizable(False, False)
         settings_win.grab_set()
 
-        cb_full = tb.Checkbutton(settings_win, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
+        # Rahmen-Frame für die Einstellungen
+        frame_border = tb.Frame(settings_win, borderwidth=3, relief="groove", padding=10)
+        frame_border.pack(expand=True, fill="both", padx=18, pady=18)
+
+        cb_full = tb.Checkbutton(frame_border, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
         cb_full.pack(pady=6)
 
         # Theme-Name zu Modus (Dark/Light) zuordnen
@@ -130,10 +134,10 @@ def main():
         }
 
         # Theme-Auswahl
-        label_theme = tb.Label(settings_win, text="Theme auswählen:")
+        label_theme = tb.Label(frame_border, text="Theme auswählen:")
         label_theme.pack(pady=(10, 0))
         theme_names = [name + theme_modes.get(name, "") for name in available_themes]
-        theme_combo = tb.Combobox(settings_win, values=theme_names, textvariable=var_theme, state="readonly")
+        theme_combo = tb.Combobox(frame_border, values=theme_names, textvariable=var_theme, state="readonly")
         theme_combo.pack(pady=4)
 
         def save_settings():
@@ -149,8 +153,8 @@ def main():
             root.destroy()
             subprocess.Popen([sys.executable, os.path.abspath(__file__)])
 
-        # Button-Frame für Speichern und Zurück
-        btn_frame = tb.Frame(settings_win)
+        # Button-Frame für Speichern und Zurück (im Rahmen)
+        btn_frame = tb.Frame(frame_border)
         btn_frame.pack(pady=10)
         btn_save = tb.Button(btn_frame, text="Speichern", command=save_settings, style=btn_style)
         btn_save.pack(side="left", padx=(0, 10))
