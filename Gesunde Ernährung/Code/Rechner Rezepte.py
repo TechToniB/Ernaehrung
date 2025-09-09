@@ -9,12 +9,13 @@ import webbrowser
 import sys
 
 # Try to import win32gui/win32con, set WIN32_AVAILABLE accordingly
+WIN32_AVAILABLE = False
 try:
     import win32gui
-    import win32con
+    import win32con  # Needed for ShowWindow
     WIN32_AVAILABLE = True
 except ImportError:
-    WIN32_AVAILABLE = False
+    pass
 
 # Excel-Datei Pfad (angepasst)
 REZEPTE_DATEI = Path(__file__).parent.parent / 'Quellen' / 'Scraper' / 'rezepte_gefiltert.xlsx'
