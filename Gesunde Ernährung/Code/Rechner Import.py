@@ -2,9 +2,10 @@ import pandas as pd
 import sys
 import argparse
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog  # <-- filedialog import added
 from pathlib import Path
 import re
+
 import os
 import json
 try:
@@ -12,11 +13,11 @@ try:
 except ImportError:
     print("Das Modul 'ttkbootstrap' ist nicht installiert. Bitte installieren Sie es mit 'pip install ttkbootstrap'.")
     sys.exit(1)
-import win32gui
-import win32con
-import math
+import platform
 
-# Entferne die Funktion get_theme() und füge stattdessen diese Funktion ein:
+import math
+import tkinter.font as tkfont
+
 def lade_settings():
     settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
     dark_mode = False
@@ -33,111 +34,144 @@ def lade_settings():
             pass
     return dark_mode, fullscreen, themename
 
-# Globale Variablen für die geladene Tabelle und die Eingabefelder
-df_global = None           # Hier wird das aktuell geladene DataFrame gespeichert
-eintrag_widgets = []       # Liste für alle Eingabefelder (Entry-Widgets)
+df_global = None
+eintrag_widgets = []
+
+tree = None
+entry_dict = {}
+table_font = None
 
 def lade_und_zeige_tabelle(dateipfad):
-    """
-    Lädt die Excel-Tabelle und zeigt sie im Fenster an.
-    """
     global df_global
     try:
-        df_global = pd.read_excel(dateipfad)  # Excel-Datei laden
-        zeige_tabelle()                       # Tabelle im GUI anzeigen
+        df_global = pd.read_excel(dateipfad)
+    # Diagnose-Popup entfernt
+        zeige_tabelle()
     except Exception as e:
         messagebox.showerror("Fehler", f"Die Datei konnte nicht geladen werden:\n{e}")
 
 def zeige_tabelle():
-    """
-    Zeigt die Tabelle in drei nebeneinanderliegenden Teilen an,
-    jeweils mit Eingabefeldern für eigene Werte.
-    """
-    global eintrag_widgets
-    # Vorherige Inhalte löschen
+    global tree, entry_dict, eintrag_widgets, table_font
     for widget in frame_tabellen.winfo_children():
         widget.destroy()
     eintrag_widgets.clear()
+    entry_dict.clear()
     if df_global is None:
         return
 
-    n = len(df_global)
-    drittel = (n + 2) // 3  # Tabelle in 3 etwa gleich große Teile aufteilen
+    h = root.winfo_height() if root.winfo_height() > 1 else root.winfo_screenheight()
+    base_font_size = max(10, int(h * 0.025))
+    table_font = tkfont.Font(family="Arial", size=base_font_size)
 
-    # Tabelle in drei Teile aufteilen
-    teile = [
-        df_global.iloc[0:drittel],
-        df_global.iloc[drittel:2*drittel],
-        df_global.iloc[2*drittel:]
-    ]
 
-    frames = []
-    # Drei Frames nebeneinander für die drei Teile
-    for i in range(3):
-        f = tk.Frame(frame_tabellen, borderwidth=2, relief="groove")
-        f.grid(row=0, column=i, padx=5, pady=5, sticky="n")
-        frames.append(f)
+    columns = list(df_global.columns) + ["Dein Wert"]
+    echte_spalten = [col for col in df_global.columns if str(col).strip() != "" and col is not None]
+    if (
+        df_global is None
+        or len(echte_spalten) == 0
+        or df_global.shape[0] == 0
+        or len(columns) < 2
+    ):
+        messagebox.showerror("Fehler", "Die Tabelle enthält keine gültigen Spaltennamen oder keine Zeilen.")
+        return
+    letzte_spalte = columns[-1] if len(columns) > 1 else None
+    tree = ttk.Treeview(frame_tabellen, columns=columns, show="headings")
+    frame_width = frame_tabellen.winfo_width() if frame_tabellen.winfo_width() > 1 else root.winfo_width()
+    col_width = int(frame_width / len(columns)) if len(columns) > 0 else 120
+    for col in columns:
+        tree.heading(col, text=col)
+        tree.column(col, width=col_width, anchor="center")
+    tree.grid(row=0, column=0, sticky="nsew")
 
-    # Jeden Teil in einem eigenen Frame anzeigen
-    for teil_idx, teil in enumerate(teile):
-        # Spaltenüberschriften
-        for i, col in enumerate(teil.columns):
-            tk.Label(frames[teil_idx], text=col, relief="ridge", bg="#e0e0e0").grid(row=0, column=i, sticky="nsew")
-        tk.Label(frames[teil_idx], text="Dein Wert", relief="ridge", bg="#e0e0e0").grid(row=0, column=len(teil.columns), sticky="nsew")
-        # Zeilen mit Daten und Eingabefeld
-        for row_idx, row in enumerate(teil.itertuples(index=False), 1):
-            for col_idx, value in enumerate(row):
-                # Wenn Wert NaN ist, nichts anzeigen
-                if value is None or (isinstance(value, float) and math.isnan(value)):
-                    label_text = ""
-                else:
-                    label_text = str(value)
-                tk.Label(frames[teil_idx], text=label_text, relief="ridge").grid(row=row_idx, column=col_idx, sticky="nsew")
-            # Eingabefeld für eigenen Wert
-            eintrag = tk.Entry(frames[teil_idx], width=10)
-            eintrag.grid(row=row_idx, column=len(teil.columns), sticky="nsew")
-            eintrag_widgets.append(eintrag)
+    vsb = ttk.Scrollbar(frame_tabellen, orient="vertical", command=tree.yview)
+    hsb = ttk.Scrollbar(frame_tabellen, orient="horizontal", command=tree.xview)
+    tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+    vsb.grid(row=0, column=1, sticky="ns")
+    hsb.grid(row=1, column=0, sticky="ew")
+    frame_tabellen.grid_rowconfigure(0, weight=1)
+    frame_tabellen.grid_rowconfigure(1, weight=0)
+    frame_tabellen.grid_columnconfigure(0, weight=1)
+    frame_tabellen.grid_columnconfigure(1, weight=0)
+
+    for idx, row in df_global.iterrows():
+        values = [row[col] if pd.notna(row[col]) else "" for col in df_global.columns]
+        values.append("")
+        tree.insert("", "end", iid=str(idx), values=values)
+
+    for idx in range(len(df_global)):
+        entry = tk.Entry(tree, font=table_font)
+        entry_dict[str(idx)] = entry
+        eintrag_widgets.append(entry)
+    def place_all_entries(event=None):
+        if df_global is not None and tree is not None and letzte_spalte is not None:
+            for idx in range(len(df_global)):
+                entry = entry_dict.get(str(idx))
+                if entry is not None:
+                    try:
+                        bbox = tree.bbox(str(idx), letzte_spalte)
+                        if bbox is not None:
+                            entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+                        else:
+                            entry.place_forget()
+                    except IndexError:
+                        entry.place_forget()
+                        return
+    tree.bind("<Configure>", place_all_entries)
+    place_all_entries()
+
+def on_resize(event):
+    if tree is not None:
+        total_width = tree.winfo_width()
+        num_cols = len(tree["columns"])
+        if num_cols > 0 and total_width > 0:
+            col_width = int(total_width / num_cols)
+            for col in tree["columns"]:
+                tree.column(col, width=col_width)
+        columns = tree["columns"]
+        letzte_spalte = columns[-1] if len(columns) > 1 else None
+        if df_global is not None and letzte_spalte is not None:
+            for idx in range(len(df_global)):
+                entry = entry_dict.get(str(idx))
+                if entry is not None:
+                    try:
+                        bbox = tree.bbox(str(idx), letzte_spalte)
+                        if bbox is not None:
+                            entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+                        else:
+                            entry.place_forget()
+                    except IndexError:
+                        entry.place_forget()
+                        return
+
 
 def tabelle_ausgewaehlt(event):
-    """
-    Wird aufgerufen, wenn eine Tabelle aus der Combobox ausgewählt wurde.
-    """
     auswahl = combo_tabellen.get()
     if auswahl:
         dateipfad = filter_ordner / auswahl
         lade_und_zeige_tabelle(dateipfad)
 
 def pruefe_werte():
-    """
-    Prüft die eingetragenen Werte gegen die Referenzwerte und zeigt das Ergebnis an.
-    Die Toleranz hängt von der Kategorie ab.
-    """
     if df_global is None:
         return
     ergebnisse = []
-    # Farben für die Einfärbung
-    COLOR_OK = "#067a06"   # Dunkelgrün
-    COLOR_FAIL = "#d81212" # Dunkelrot
-    # Alle Zeilen der Tabelle durchgehen
+    COLOR_OK = "#067a06"
+    COLOR_FAIL = "#d81212"
     for idx, (_, row) in enumerate(df_global.iterrows()):
         try:
             ref_str = str(row['Referenzwert'])
             match = re.search(r"[-+]?\d*\.?\d+", ref_str)
             if not match:
                 ergebnisse.append("Kein Referenzwert")
-                eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
             referenz = float(match.group())
-            eintrag = eintrag_widgets[idx].get()
-            if eintrag.strip() == "":
+            entry = entry_dict.get(str(idx))
+            if not entry or entry.get().strip() == "":
                 ergebnisse.append("Kein Wert")
-                eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
             try:
-                wert = float(eintrag)
+                wert = float(entry.get())
             except ValueError:
                 ergebnisse.append("Ungültige Eingabe")
-                eintrag_widgets[idx].config(bg=COLOR_FAIL)
                 continue
             kategorie = str(row.get('Kategorie', '')).strip().lower()
             naehrstoff = str(row.get('Nährstoff', '')).strip().lower()
@@ -185,106 +219,75 @@ def pruefe_werte():
                     ergebnisse.append("Zu niedrig")
                 else:
                     ergebnisse.append("Zu hoch")
-            # Zelle einfärben
-            if im_rahmen:
-                eintrag_widgets[idx].config(bg=COLOR_OK)
-            else:
-                eintrag_widgets[idx].config(bg=COLOR_FAIL)
+            if entry:
+                entry.config(bg=COLOR_OK if im_rahmen else COLOR_FAIL)
         except Exception:
             ergebnisse.append("Fehler in Zeile")
-            if idx < len(eintrag_widgets):
-                eintrag_widgets[idx].config(bg=COLOR_FAIL)
-    def zeige_ergebnisse_in_tabelle(ergebnisse):
-        idx = 0
-        n = len(df_global)
-        drittel = (n + 2) // 3
-        teile = [
-            df_global.iloc[0:drittel],
-            df_global.iloc[drittel:2*drittel],
-            df_global.iloc[2*drittel:]
-        ]
-        for teil_idx in range(3):
-            frames = frame_tabellen.grid_slaves(row=0, column=teil_idx)
-            if not frames:
-                continue
-            frame = frames[0]
-            teil = teile[teil_idx]
-            rows = len(teil)
-            num_cols = len(teil.columns)
-            for row in range(1, rows+1):
-                tk.Label(frame, text=ergebnisse[idx], relief="ridge", bg="#f0f0f0").grid(row=row, column=num_cols+1, sticky="nsew")
-                idx += 1
+            entry = entry_dict.get(str(idx))
+            if entry:
+                entry.config(bg=COLOR_FAIL)
+    messagebox.showinfo("Prüfungsergebnisse", "\n".join(ergebnisse))
 
-    zeige_ergebnisse_in_tabelle(ergebnisse)
-# Filter-Ordner festlegen (hier werden die Excel-Dateien gesucht)
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
-
-# Tabellen-Dateien im Filter-Ordner auflisten
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx") if f.is_file()]
 
-# Fenster erstellen mit optionalem Vollbildmodus
 dark_mode, fullscreen, themename = lade_settings()
 IMPORT_TITLE = 'RechnerImportFenster2025'
 root = tb.Window(themename=themename)
 root.title(IMPORT_TITLE)
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
 if fullscreen:
     root.attributes('-fullscreen', True)
+else:
+    w = int(screen_width * 0.9)
+    h = int(screen_height * 0.9)
+    root.geometry(f"{w}x{h}")
 
-# Auswahlfeld für Tabellen
+base_font_size = max(10, int(screen_height * 0.025))
+table_font = tkfont.Font(family="Arial", size=base_font_size)
+
+root.grid_rowconfigure(1, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.bind("<Configure>", on_resize)
+
 combo_tabellen = ttk.Combobox(root, values=tabellen, state="readonly")
 combo_tabellen.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
 combo_tabellen.bind("<<ComboboxSelected>>", tabelle_ausgewaehlt)
 
-# Frame für Tabellenausgabe
-frame_tabellen = tk.Frame(root)
-frame_tabellen.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
 
-# Prüfen-Button
-btn_pruefen = tb.Button(root, text="Prüfen", command=pruefe_werte)
-btn_pruefen.grid(row=2, column=0, sticky="e", padx=10, pady=5)
+GRID_LAST_ROW = 2
+GRID_LAST_COL = 2
+# Tabelle nimmt den gesamten Platz bis zu den Buttons ein
+frame_tabellen = tk.Frame(root)
+frame_tabellen.grid(row=1, column=0, columnspan=3, padx=0, pady=0, sticky="nsew")
+root.grid_rowconfigure(1, weight=1)  # Tabelle wächst
+root.grid_rowconfigure(GRID_LAST_ROW, weight=0)  # Buttons fix unten
+root.grid_columnconfigure(0, weight=1)
+frame_tabellen.grid_rowconfigure(0, weight=1)
+frame_tabellen.grid_columnconfigure(0, weight=1)
 
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
-    def enumHandler(hwnd, lParam):
-        if win32gui.IsWindowVisible(hwnd):
-            if window_title in win32gui.GetWindowText(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-    win32gui.EnumWindows(enumHandler, None)
+    pass
 
 def zurueck_zum_hauptmenue():
-
-    # Hier sollte die Logik für das Zurückkehren zum Hauptmenü stehen
     bring_hauptmenue_to_front()
     root.destroy()
 
-# Konstanten für spezielle Grid-Positionen (letzte Zeile/Spalte für flexible Layouts)
-GRID_LAST_ROW = 100  # Wird für flexible Zeilengröße verwendet
-GRID_LAST_COL = 2    # Wird für flexible Spaltengröße verwendet
 
-# Grid so konfigurieren, dass die letzte Zeile/Spalte flexibel ist
-root.grid_rowconfigure(GRID_LAST_ROW, weight=1)
-root.grid_columnconfigure(GRID_LAST_COL, weight=1)
 
-# Hauptmenü-Button ganz unten rechts platzieren
-frame_hauptmenue = tk.Frame(root)
-frame_hauptmenue.grid(row=GRID_LAST_ROW, column=GRID_LAST_COL, sticky="se", padx=10, pady=10)
-btn_hauptmenue = tb.Button(frame_hauptmenue, text="Verlassen", command=zurueck_zum_hauptmenue)
-btn_hauptmenue.pack(anchor='e', side='right')
 
-from tkinter import filedialog
 
 def speichern_unter():
     if df_global is None:
         messagebox.showerror("Fehler", "Keine Tabelle geladen.")
         return
-    # Kopiere das DataFrame, um die Benutzereingaben einzufügen
     df_save = df_global.copy()
     pruefungsergebnisse = []
-    # Werte aus den Entry-Widgets übernehmen und Prüfung durchführen
     for idx, entry in enumerate(eintrag_widgets):
         val = entry.get()
         df_save.at[idx, 'Dein Wert'] = val
-        # Prüflogik wie in pruefe_werte (vereinfacht, ohne Farben)
         try:
             ref_str = str(df_global.iloc[idx]['Referenzwert'])
             match = re.search(r"[-+]?\d*\.?\d+", ref_str)
@@ -342,9 +345,7 @@ def speichern_unter():
                     pruefungsergebnisse.append("Zu hoch")
         except Exception:
             pruefungsergebnisse.append("Fehler in Zeile")
-    # Spalte anhängen
     df_save['Prüfung'] = pruefungsergebnisse
-    # Dateidialog für Speichern unter
     file_path = filedialog.asksaveasfilename(
         defaultextension=".xlsx",
         filetypes=[("Excel-Dateien", "*.xlsx")],
@@ -357,8 +358,18 @@ def speichern_unter():
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
 
-# Speichern unter-Button
-btn_speichern = tb.Button(root, text="Speichern unter", command=speichern_unter)
-btn_speichern.grid(row=2, column=1, sticky="w", padx=10, pady=5)
+
+button_frame = tk.Frame(root)
+button_frame.grid(row=GRID_LAST_ROW, column=0, columnspan=3, sticky="sew", padx=0, pady=0)
+button_frame.grid_columnconfigure(0, weight=1)
+button_frame.grid_columnconfigure(1, weight=1)
+button_frame.grid_columnconfigure(2, weight=1)
+
+btn_pruefen = tb.Button(button_frame, text="Prüfen", command=pruefe_werte)
+btn_pruefen.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
+btn_speichern = tb.Button(button_frame, text="Speichern unter", command=speichern_unter)
+btn_speichern.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+btn_hauptmenue = tb.Button(button_frame, text="Verlassen", command=zurueck_zum_hauptmenue)
+btn_hauptmenue.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
 
 root.mainloop()

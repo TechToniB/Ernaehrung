@@ -66,14 +66,17 @@ def lade_alle_kalender():
     return pd.DataFrame(columns=["Gemüse/Obst", "Monate", "Kalender"])
 
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
-    if win32gui is None:
-        return
-    def enumHandler(hwnd, lParam):
-        if win32gui.IsWindowVisible(hwnd):
-            if window_title in win32gui.GetWindowText(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-    win32gui.EnumWindows(enumHandler, None)
+    import sys
+    if sys.platform.startswith('win') and win32gui is not None and win32con is not None:
+        def enumHandler(hwnd, lParam):
+            if hasattr(win32gui, 'IsWindowVisible') and win32gui.IsWindowVisible(hwnd):
+                if hasattr(win32gui, 'GetWindowText') and window_title in win32gui.GetWindowText(hwnd):
+                    if hasattr(win32gui, 'ShowWindow') and hasattr(win32con, 'SW_RESTORE'):
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    if hasattr(win32gui, 'SetForegroundWindow'):
+                        win32gui.SetForegroundWindow(hwnd)
+        if hasattr(win32gui, 'EnumWindows'):
+            win32gui.EnumWindows(enumHandler, None)
 
 def lade_settings():
     settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
@@ -189,7 +192,9 @@ class SaisonApp:
                 messagebox.showerror("Fehler", f"Fehler beim Speichern: {e}")
 
     def zurueck_zum_hauptmenue(self):
-        bring_hauptmenue_to_front()
+        import sys
+        if sys.platform.startswith('win') and win32gui is not None and win32con is not None:
+            bring_hauptmenue_to_front()
         self.root.destroy()
 
 if __name__ == "__main__":

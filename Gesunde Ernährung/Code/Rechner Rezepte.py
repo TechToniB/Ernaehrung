@@ -1,12 +1,13 @@
-
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
+
 import os
 import json
 import ttkbootstrap as tb
 import webbrowser
+import sys
 try:
     import win32gui
     import win32con
@@ -185,6 +186,9 @@ combo_rezepte.bind("<<ComboboxSelected>>", zeige_zutaten)
 
 def speichern_unter():
     rezept = combo_rezepte.get()
+    if df_rezepte is None:
+        messagebox.showerror("Fehler", "Die Rezepte-Datei konnte nicht geladen werden. Bitte prüfen Sie die Datei und starten Sie das Programm neu.")
+        return
     if not rezept or not zutaten_widgets:
         messagebox.showerror("Fehler", "Kein Rezept ausgewählt oder keine Zutaten vorhanden.")
         return
@@ -233,18 +237,24 @@ btn_speichern.grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
 
 # Funktion, um das Hauptmenü in den Vordergrund zu bringen und dann das Fenster zu schließen
+
+# Cross-platform: bring main menu to front (Windows only)
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
-    if win32gui is None:
-        return
-    def enumHandler(hwnd, lParam):
-        if win32gui.IsWindowVisible(hwnd):
-            if window_title in win32gui.GetWindowText(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-    win32gui.EnumWindows(enumHandler, None)
+    if sys.platform.startswith('win') and win32gui is not None and win32con is not None:
+        def enumHandler(hwnd, lParam):
+            if hasattr(win32gui, 'IsWindowVisible') and win32gui.IsWindowVisible(hwnd):
+                if hasattr(win32gui, 'GetWindowText') and window_title in win32gui.GetWindowText(hwnd):
+                    if hasattr(win32gui, 'ShowWindow') and hasattr(win32con, 'SW_RESTORE'):
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                    if hasattr(win32gui, 'SetForegroundWindow'):
+                        win32gui.SetForegroundWindow(hwnd)
+        if hasattr(win32gui, 'EnumWindows'):
+            win32gui.EnumWindows(enumHandler, None)
 
 def zurueck_zum_hauptmenue():
-    bring_hauptmenue_to_front()
+    if sys.platform.startswith('win') and win32gui is not None:
+        bring_hauptmenue_to_front()
+    # On Linux/macOS, just close the window
     root.destroy()
 
 # Verlassen Button unten rechts in eigenem Frame

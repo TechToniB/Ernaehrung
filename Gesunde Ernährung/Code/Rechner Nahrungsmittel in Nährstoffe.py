@@ -161,8 +161,13 @@ import argparse
 import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as tb
-import win32gui
-import win32con
+import platform
+try:
+	import win32gui
+	import win32con
+except ImportError:
+	win32gui = None
+	win32con = None
 import json
 
 
@@ -226,8 +231,14 @@ root.title(NAEHRSTOFFE_TITLE)
 root.geometry('800x550')
 if fullscreen:
 	root.attributes('-fullscreen', True)
-	root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
-	root.config(menu='')  # Entfernt die Menüleiste im Vollbildmodus
+	# Remove window border only on Windows
+	if platform.system() == "Windows":
+		root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
+		# Remove menu only if it exists
+		try:
+			root.config(menu=None)
+		except Exception:
+			pass
 root.lift()
 root.focus_force()
 
@@ -340,8 +351,12 @@ if not fullscreen:
 	# Menüleiste anwenden
 	root.config(menu=menue_leiste)
 
+
 # --- Hauptmenü-Button ---
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
+	if win32gui is None:
+		# On Linux/Mac, just pass (no window focus possible)
+		return
 	def enumHandler(hwnd, lParam):
 		if win32gui.IsWindowVisible(hwnd):
 			if window_title in win32gui.GetWindowText(hwnd):

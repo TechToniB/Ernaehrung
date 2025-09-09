@@ -5,45 +5,35 @@ import sys
 import psutil
 import json
 import ttkbootstrap as tb
-try:
-	import win32gui
-	import win32con
-except ImportError:
-	win32gui = None
-	win32con = None
+import platform
 
-def bring_window_to_front(window_title):
-	if win32gui is None:
-		return False
-	found = False
-	def enumHandler(hwnd, lParam):
-		nonlocal found
-		if win32gui.IsWindowVisible(hwnd):
-			if window_title in win32gui.GetWindowText(hwnd):
-				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-				win32gui.SetForegroundWindow(hwnd)
-				found = True
-	win32gui.EnumWindows(enumHandler, None)
-	return found
+# Cross-platform window focus/restore (Tkinter only)
+def bring_window_to_front(window_title=None, root=None):
+    if root is not None:
+        try:
+            root.deiconify()
+            root.lift()
+            root.focus_force()
+            return True
+        except Exception:
+            return False
+    return False
 
 def open_script(script_name, window_title=None, dark_mode=False):
-	# Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
-	script_path = os.path.join(os.path.dirname(__file__), script_name)
-	# Prüfen, ob das Fenster schon existiert und ggf. wiederherstellen
-	if window_title and bring_window_to_front(window_title):
-		return
-	# Prüfen, ob das Skript bereits läuft (Prozess)
-	for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-		try:
-			if script_path in proc.info['cmdline']:
-				return
-		except Exception:
-			continue
-	# Wenn nicht gefunden, dann starten
-	cmd = [sys.executable, script_path]
-	if dark_mode:
-		cmd.append('--dark')
-	subprocess.Popen(cmd)
+    # Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
+    script_path = os.path.join(os.path.dirname(__file__), script_name)
+    # Prüfen, ob das Skript bereits läuft (Prozess)
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if script_path in proc.info['cmdline']:
+                return
+        except Exception:
+            continue
+    # Wenn nicht gefunden, dann starten
+    cmd = [sys.executable, script_path]
+    if dark_mode:
+        cmd.append('--dark')
+    subprocess.Popen(cmd)
 
 # --- Hauptmenü-Logik ---
 def main():
@@ -76,9 +66,11 @@ def main():
     root.title('MeinErnaehrungsHauptmenue2025')
     root.geometry('400x300')
     if fullscreen:
+        # Cross-platform fullscreen
         root.attributes('-fullscreen', True)
-
-        root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
+        # Remove window border only on Windows
+        if platform.system() == "Windows":
+            root.overrideredirect(True)
 
     var_dark = tk.BooleanVar(value=dark_mode)
     var_fullscreen = tk.BooleanVar(value=fullscreen)
@@ -95,8 +87,10 @@ def main():
     NAEHRSTOFFE_TITLE = 'RechnerNaehrstoffeFenster2025'
 
     def open_settings():
-        settings_win = tb.Toplevel(root)
-        settings_win.overrideredirect(True)  # Entfernt Menüleiste/Fensterrahmen
+        settings_win = tk.Toplevel(root)
+        # Remove window border only on Windows
+        if platform.system() == "Windows":
+            settings_win.overrideredirect(True)
         win_w, win_h = 400, 250
         settings_win.update_idletasks()
         screen_w = settings_win.winfo_screenwidth()
@@ -111,7 +105,7 @@ def main():
         frame_border = tb.Frame(settings_win, borderwidth=3, relief="groove", padding=10)
         frame_border.pack(expand=True, fill="both", padx=18, pady=18)
 
-        cb_full = tb.Checkbutton(frame_border, text="Vollbildmodus aktivieren", variable=var_fullscreen, bootstyle="round-toggle")
+        cb_full = tb.Checkbutton(frame_border, text="Vollbildmodus aktivieren", variable=var_fullscreen)
         cb_full.pack(pady=6)
 
         # Theme-Name zu Modus (Dark/Light) zuordnen
