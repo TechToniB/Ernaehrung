@@ -21,13 +21,15 @@ def bring_window_to_front(window_title=None, root=None):
 
 def open_script(script_name, window_title=None, dark_mode=False):
     # Öffnet das gewünschte Python-Skript in einem neuen Prozess, aber nur wenn es noch nicht läuft
-    script_path = os.path.join(os.path.dirname(__file__), script_name)
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), script_name))
     # Prüfen, ob das Skript bereits läuft (Prozess)
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             cmdline = proc.info.get('cmdline')
-            if isinstance(cmdline, list) and script_path in cmdline:
-                return
+            if isinstance(cmdline, list):
+                for arg in cmdline:
+                    if os.path.abspath(arg) == script_path:
+                        return
         except Exception:
             continue
     # Wenn nicht gefunden, dann starten

@@ -32,6 +32,25 @@ def lade_settings():
             pass
     return dark_mode, fullscreen, themename
 
+dark_mode, fullscreen, themename = lade_settings()
+IMPORT_TITLE = 'RechnerImportFenster2025'
+root = tb.Window(themename=themename)
+root.title(IMPORT_TITLE)
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+if fullscreen:
+    root.attributes('-fullscreen', True)
+else:
+    w = int(screen_width * 0.9)
+    h = int(screen_height * 0.9)
+    root.geometry(f"{w}x{h}")
+
+base_font_size = max(10, int(screen_height * 0.025))
+table_font = tkfont.Font(family="Arial", size=base_font_size)
+
+
+
 df_global = None
 eintrag_widgets = []
 
@@ -209,25 +228,9 @@ def pruefe_werte():
                 entry.config(bg=COLOR_FAIL)
     messagebox.showinfo("Prüfungsergebnisse", "\n".join(ergebnisse))
 
+
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx") if f.is_file()]
-
-dark_mode, fullscreen, themename = lade_settings()
-IMPORT_TITLE = 'RechnerImportFenster2025'
-root = tb.Window(themename=themename)
-root.title(IMPORT_TITLE)
-
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-if fullscreen:
-    root.attributes('-fullscreen', True)
-else:
-    w = int(screen_width * 0.9)
-    h = int(screen_height * 0.9)
-    root.geometry(f"{w}x{h}")
-
-base_font_size = max(10, int(screen_height * 0.025))
-table_font = tkfont.Font(family="Arial", size=base_font_size)
 
 root.grid_rowconfigure(1, weight=1)
 root.grid_columnconfigure(0, weight=1)
@@ -245,6 +248,9 @@ root.grid_rowconfigure(GRID_LAST_ROW, weight=0)
 root.grid_columnconfigure(0, weight=1)
 frame_tabellen.grid_rowconfigure(0, weight=1)
 frame_tabellen.grid_columnconfigure(0, weight=1)
+
+# Now it's safe to bind events to root
+root.bind("<Configure>", on_resize)
 
 def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
     pass
