@@ -113,14 +113,15 @@ def zeige_tabelle():
         entry_dict[str(idx)] = entry
         eintrag_widgets.append(entry)
     def place_all_entries(event=None):
-        for idx in range(len(df_global)):
-            entry = entry_dict.get(str(idx))
-            if entry is not None:
-                bbox = tree.bbox(str(idx), columns[dein_wert_col_idx])
-                if bbox:
-                    entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
-                else:
-                    entry.place_forget()
+        if df_global is not None and tree is not None:
+            for idx in range(len(df_global)):
+                entry = entry_dict.get(str(idx))
+                if entry is not None:
+                    bbox = tree.bbox(str(idx), columns[dein_wert_col_idx]) if hasattr(tree, "bbox") else None
+                    if bbox:
+                        entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+                    else:
+                        entry.place_forget()
     tree.bind("<Configure>", place_all_entries)
     place_all_entries()
 
