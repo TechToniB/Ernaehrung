@@ -53,6 +53,7 @@ if os.path.exists(settings_path):
     except Exception:
         pass
 
+
 try:
     root = tb.Window(themename=themename)
 except Exception:
@@ -60,6 +61,14 @@ except Exception:
 root.title('Rezept-Zutaten-Anzeige')
 if fullscreen:
     root.attributes('-fullscreen', True)
+
+# Make window and grid scale dynamically
+root.grid_rowconfigure(1, weight=1)  # Zutatenliste row
+root.grid_rowconfigure(2, weight=0)  # Button row
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_columnconfigure(2, weight=1)
+root.grid_columnconfigure(3, weight=0)
 
 # Dropdown für Rezepte mit eigener Such-/Filterfunktion
 label_rezept = tk.Label(root, text="Rezept auswählen:")
@@ -82,10 +91,23 @@ def filter_rezepte(event=None):
 
 entry_var.trace_add('write', lambda *args: filter_rezepte())
 
-# Frame für Zutatenliste
-frame_zutaten = tk.Frame(root)
-frame_zutaten.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
 
+# Zutatenliste mit Scrollbar
+zutaten_canvas = tk.Canvas(root)
+zutaten_canvas.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
+scrollbar_zutaten = tk.Scrollbar(root, orient="vertical", command=zutaten_canvas.yview)
+scrollbar_zutaten.grid(row=1, column=3, sticky="ns")
+zutaten_canvas.configure(yscrollcommand=scrollbar_zutaten.set)
+frame_zutaten = tk.Frame(zutaten_canvas)
+zutaten_canvas.create_window((0,0), window=frame_zutaten, anchor="nw")
+def on_frame_configure(event):
+    zutaten_canvas.configure(scrollregion=zutaten_canvas.bbox("all"))
+    zutaten_canvas.itemconfig("zutaten_frame", width=zutaten_canvas.winfo_width())
+frame_zutaten.bind("<Configure>", on_frame_configure)
+def on_canvas_resize(event):
+    zutaten_canvas.itemconfig("zutaten_frame", width=event.width)
+zutaten_canvas.bind("<Configure>", on_canvas_resize)
+zutaten_canvas.create_window((0,0), window=frame_zutaten, anchor="nw", tags="zutaten_frame")
 zutaten_widgets = []
 ergebnis_labels = []  # NEU: Für Ergebnis-Spalte
 
@@ -123,8 +145,18 @@ def berechne_erg():
         except Exception:
             ergebnis_labels[idx]['text'] = "-"
 
+
+# Reset function for textbox and result labels
+def reset_entry_and_results():
+    entry_verwendete.delete(0, tk.END)
+    entry_verwendete.insert(0, "1")
+    for lbl in ergebnis_labels:
+        lbl['text'] = "-"
+
 btn_berechnen = tk.Button(frame_verwendete, text="Berechnen", command=berechne_erg)
 btn_berechnen.pack(side="left", padx=(5, 0))
+btn_reset = tk.Button(frame_verwendete, text="Reset", command=reset_entry_and_results)
+btn_reset.pack(side="left", padx=(5, 0))
 
 # Funktion zum Anzeigen der Zutaten
 def zeige_zutaten(event=None):
@@ -257,13 +289,11 @@ def zurueck_zum_hauptmenue():
     # On Linux/macOS, just close the window
     root.destroy()
 
-# Verlassen Button unten rechts in eigenem Frame
-GRID_LAST_ROW = 100
-GRID_LAST_COL = 2
-root.grid_rowconfigure(GRID_LAST_ROW, weight=1)
-root.grid_columnconfigure(GRID_LAST_COL, weight=1)
+
+
+# Verlassen Button unten rechts in der Ecke
 frame_verlassen = tk.Frame(root)
-frame_verlassen.grid(row=GRID_LAST_ROW, column=GRID_LAST_COL, sticky="se", padx=10, pady=10)
+frame_verlassen.grid(row=3, column=3, sticky="se", padx=10, pady=10)
 btn_verlassen = tk.Button(frame_verlassen, text="Verlassen", command=zurueck_zum_hauptmenue)
 btn_verlassen.pack(anchor='e', side='right')
 
