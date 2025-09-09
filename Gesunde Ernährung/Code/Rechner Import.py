@@ -2,10 +2,9 @@ import pandas as pd
 import sys
 import argparse
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog  # <-- filedialog import added
+from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
 import re
-
 import os
 import json
 try:
@@ -14,7 +13,6 @@ except ImportError:
     print("Das Modul 'ttkbootstrap' ist nicht installiert. Bitte installieren Sie es mit 'pip install ttkbootstrap'.")
     sys.exit(1)
 import platform
-
 import math
 import tkinter.font as tkfont
 
@@ -45,7 +43,9 @@ def lade_und_zeige_tabelle(dateipfad):
     global df_global
     try:
         df_global = pd.read_excel(dateipfad)
-    # Diagnose-Popup entfernt
+        # Bugfix: Ensure "Dein Wert" column exists
+        if "Dein Wert" not in df_global.columns:
+            df_global["Dein Wert"] = ""
         zeige_tabelle()
     except Exception as e:
         messagebox.showerror("Fehler", f"Die Datei konnte nicht geladen werden:\n{e}")
@@ -63,18 +63,7 @@ def zeige_tabelle():
     base_font_size = max(10, int(h * 0.025))
     table_font = tkfont.Font(family="Arial", size=base_font_size)
 
-
-    columns = list(df_global.columns) + ["Dein Wert"]
-    echte_spalten = [col for col in df_global.columns if str(col).strip() != "" and col is not None]
-    if (
-        df_global is None
-        or len(echte_spalten) == 0
-        or df_global.shape[0] == 0
-        or len(columns) < 2
-    ):
-        messagebox.showerror("Fehler", "Die Tabelle enthält keine gültigen Spaltennamen oder keine Zeilen.")
-        return
-    letzte_spalte = columns[-1] if len(columns) > 1 else None
+    columns = list(df_global.columns)
     tree = ttk.Treeview(frame_tabellen, columns=columns, show="headings")
     frame_width = frame_tabellen.winfo_width() if frame_tabellen.winfo_width() > 1 else root.winfo_width()
     col_width = int(frame_width / len(columns)) if len(columns) > 0 else 120
@@ -94,33 +83,30 @@ def zeige_tabelle():
     frame_tabellen.grid_columnconfigure(1, weight=0)
 
     for idx, row in df_global.iterrows():
-        values = [row[col] if pd.notna(row[col]) else "" for col in df_global.columns]
-        values.append("")
+        values = [row[col] if pd.notna(row[col]) else "" for col in columns]
         tree.insert("", "end", iid=str(idx), values=values)
 
+    # Place Entry widgets for "Dein Wert" column
+    dein_wert_col_idx = columns.index("Dein Wert")
     for idx in range(len(df_global)):
         entry = tk.Entry(tree, font=table_font)
+        entry.insert(0, str(df_global.at[idx, "Dein Wert"]))
         entry_dict[str(idx)] = entry
         eintrag_widgets.append(entry)
     def place_all_entries(event=None):
-        if df_global is not None and tree is not None and letzte_spalte is not None:
-            for idx in range(len(df_global)):
-                entry = entry_dict.get(str(idx))
-                if entry is not None:
-                    try:
-                        bbox = tree.bbox(str(idx), letzte_spalte)
-                        if bbox is not None:
-                            entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
-                        else:
-                            entry.place_forget()
-                    except IndexError:
-                        entry.place_forget()
-                        return
+        for idx in range(len(df_global)):
+            entry = entry_dict.get(str(idx))
+            if entry is not None:
+                bbox = tree.bbox(str(idx), columns[dein_wert_col_idx])
+                if bbox:
+                    entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+                else:
+                    entry.place_forget()
     tree.bind("<Configure>", place_all_entries)
     place_all_entries()
 
 def on_resize(event):
-    if tree is not None:
+    if tree:
         total_width = tree.winfo_width()
         num_cols = len(tree["columns"])
         if num_cols > 0 and total_width > 0:
@@ -128,21 +114,16 @@ def on_resize(event):
             for col in tree["columns"]:
                 tree.column(col, width=col_width)
         columns = tree["columns"]
-        letzte_spalte = columns[-1] if len(columns) > 1 else None
-        if df_global is not None and letzte_spalte is not None:
-            for idx in range(len(df_global)):
-                entry = entry_dict.get(str(idx))
-                if entry is not None:
-                    try:
-                        bbox = tree.bbox(str(idx), letzte_spalte)
-                        if bbox is not None:
-                            entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
-                        else:
-                            entry.place_forget()
-                    except IndexError:
-                        entry.place_forget()
-                        return
-
+        dein_wert_col_idx = columns.index("Dein Wert")
+        for idx in range(len(entry_dict)):
+            entry = entry_dict.get(str(idx))
+            if entry is not None:
+                bbox = tree.bbox(str(idx), columns[dein_wert_col_idx])
+                if bbox:
+                    entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+                else:
+                    entry.place_forget()
+root.bind("<Configure>", on_resize)
 
 def tabelle_ausgewaehlt(event):
     auswahl = combo_tabellen.get()
@@ -250,20 +231,17 @@ table_font = tkfont.Font(family="Arial", size=base_font_size)
 
 root.grid_rowconfigure(1, weight=1)
 root.grid_columnconfigure(0, weight=1)
-root.bind("<Configure>", on_resize)
 
 combo_tabellen = ttk.Combobox(root, values=tabellen, state="readonly")
 combo_tabellen.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
 combo_tabellen.bind("<<ComboboxSelected>>", tabelle_ausgewaehlt)
 
-
 GRID_LAST_ROW = 2
 GRID_LAST_COL = 2
-# Tabelle nimmt den gesamten Platz bis zu den Buttons ein
 frame_tabellen = tk.Frame(root)
 frame_tabellen.grid(row=1, column=0, columnspan=3, padx=0, pady=0, sticky="nsew")
-root.grid_rowconfigure(1, weight=1)  # Tabelle wächst
-root.grid_rowconfigure(GRID_LAST_ROW, weight=0)  # Buttons fix unten
+root.grid_rowconfigure(1, weight=1)
+root.grid_rowconfigure(GRID_LAST_ROW, weight=0)
 root.grid_columnconfigure(0, weight=1)
 frame_tabellen.grid_rowconfigure(0, weight=1)
 frame_tabellen.grid_columnconfigure(0, weight=1)
@@ -275,15 +253,14 @@ def zurueck_zum_hauptmenue():
     bring_hauptmenue_to_front()
     root.destroy()
 
-
-
-
-
 def speichern_unter():
     if df_global is None:
         messagebox.showerror("Fehler", "Keine Tabelle geladen.")
         return
     df_save = df_global.copy()
+    # Bugfix: Ensure "Dein Wert" column exists before saving
+    if "Dein Wert" not in df_save.columns:
+        df_save["Dein Wert"] = ""
     pruefungsergebnisse = []
     for idx, entry in enumerate(eintrag_widgets):
         val = entry.get()
@@ -357,7 +334,6 @@ def speichern_unter():
             messagebox.showinfo("Erfolg", f"Datei gespeichert unter:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Fehler", f"Fehler beim Speichern:\n{e}")
-
 
 button_frame = tk.Frame(root)
 button_frame.grid(row=GRID_LAST_ROW, column=0, columnspan=3, sticky="sew", padx=0, pady=0)

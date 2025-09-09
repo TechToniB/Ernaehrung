@@ -25,7 +25,8 @@ def open_script(script_name, window_title=None, dark_mode=False):
     # Prüfen, ob das Skript bereits läuft (Prozess)
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
-            if script_path in proc.info['cmdline']:
+            cmdline = proc.info.get('cmdline')
+            if isinstance(cmdline, list) and script_path in cmdline:
                 return
         except Exception:
             continue
@@ -75,7 +76,8 @@ def main():
     var_dark = tk.BooleanVar(value=dark_mode)
     var_fullscreen = tk.BooleanVar(value=fullscreen)
     var_theme = tk.StringVar(value=themename)
-    btn_style = "darkly.TButton" if "dark" in themename else "TButton"
+    dark_themes = {"darkly", "cyborg", "superhero", "solar", "vapor"}
+    btn_style = "darkly.TButton" if themename in dark_themes else "TButton"
 
     label = tb.Label(root, text="Bitte wählen Sie eine Funktion:", font=("Arial", 14))
     if fullscreen:
@@ -135,7 +137,7 @@ def main():
         theme_combo.pack(pady=4)
 
         def save_settings():
-            # Nur den reinen Theme-Namen speichern
+            selected_theme = theme_combo.get().split(" (")[0]
             selected_theme = theme_combo.get().split()[0]
             with open(settings_path, 'w', encoding='utf-8') as f:
                 json.dump({
@@ -144,8 +146,10 @@ def main():
                     'themename': selected_theme
                 }, f)
             settings_win.destroy()
-            root.destroy()
-            subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+            def restart_app():
+                subprocess.Popen([sys.executable, os.path.abspath(__file__)])
+                root.destroy()
+            root.after(100, restart_app)
 
         # Button-Frame für Speichern und Zurück (im Rahmen)
         btn_frame = tb.Frame(frame_border)
@@ -165,9 +169,8 @@ def main():
         ("Einstellungen", open_settings),
         ("Beenden", root.destroy)
     ]
-
     if fullscreen:
-        btn_frame = tk.Frame(root, bg='red')
+        btn_frame = tk.Frame(root)
         btn_frame.pack(side='top', expand=True, fill='both')
         for text, cmd in button_list:
             try:
@@ -175,6 +178,7 @@ def main():
                 btn.pack(fill='x', pady=10)
                 print(f"[DEBUG] Button erzeugt: {text}")
             except Exception as e:
+                print(f"[ERROR] Button '{text}' konnte nicht erzeugt werden: {e}")
                 print(f"[ERROR] Button '{text}' konnte nicht erzeugt werden: {e}")
     else:
         for text, cmd in button_list:
