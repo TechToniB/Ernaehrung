@@ -270,24 +270,11 @@ def sum_button_action():
 btn_sum = tb.Button(frame_buttons_unten, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
 
-# --- Hauptmenü-Button ---
-def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
-	if win32gui is None:
-		# On Linux/Mac, just pass (no window focus possible)
-		return
-	def enumHandler(hwnd, lParam):
-		if win32gui is not None and win32con is not None and win32gui.IsWindowVisible(hwnd):
-			if window_title in win32gui.GetWindowText(hwnd):
-				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-				win32gui.SetForegroundWindow(hwnd)
-	if win32gui is not None and win32con is not None:
-		win32gui.EnumWindows(enumHandler, None)
+def verlassen_und_hauptmenue():
+	bring_hauptmenue_to_front()
+	root.destroy()
 
-def zurueck_zum_hauptmenue():
-    bring_hauptmenue_to_front()
-    root.destroy()
-
-btn_hauptmenue = tb.Button(frame_buttons_unten, text='Verlassen', command=zurueck_zum_hauptmenue)
+btn_hauptmenue = tb.Button(frame_buttons_unten, text='Verlassen', command=verlassen_und_hauptmenue)
 btn_hauptmenue.pack(side='right', padx=(0, 10))
 
 

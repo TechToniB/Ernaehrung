@@ -116,7 +116,7 @@ def zeige_tabelle():
         elif pruefung in ["Zu hoch", "Zu niedrig", "Ungültige Eingabe", "Fehler in Zeile"]:
             entry.config(bg="#dc3545", fg="white")  # helle Schrift auf rot
         elif str(df_global.at[idx, "Dein Wert"]).strip() == "":
-            entry.config(bg=root.style.colors.secondary, fg="black")  # Theme-Grau für leere Felder
+            entry.config(bg="#e9ecef", fg="black")  # Theme-Grau für leere Felder
         else:
             entry.config(bg="white", fg="black")
         entry_dict[str(idx)] = entry
