@@ -110,6 +110,15 @@ def zeige_tabelle():
     for idx in range(len(df_global)):
         entry = tk.Entry(tree, font=table_font)
         entry.insert(0, str(df_global.at[idx, "Dein Wert"]))
+        pruefung = str(df_global.at[idx, "Prüfung"]) if "Prüfung" in df_global.columns else ""
+        if pruefung == "Im Rahmen":
+            entry.config(bg="#28a745", fg="#222")  # dunkle Schrift auf grün
+        elif pruefung in ["Zu hoch", "Zu niedrig", "Ungültige Eingabe", "Fehler in Zeile"]:
+            entry.config(bg="#dc3545", fg="white")  # helle Schrift auf rot
+        elif str(df_global.at[idx, "Dein Wert"]).strip() == "":
+            entry.config(bg=root.style.colors.secondary, fg="black")  # Theme-Grau für leere Felder
+        else:
+            entry.config(bg="white", fg="black")
         entry_dict[str(idx)] = entry
         eintrag_widgets.append(entry)
     def place_all_entries(event=None):
@@ -155,8 +164,11 @@ def pruefe_werte():
     if df_global is None:
         return
     ergebnisse = []
-    COLOR_OK = "#067a06"
-    COLOR_FAIL = "#d81212"
+    COLOR_OK = "#28a745"  # Theme-Grün (Bootstrap Success)
+    COLOR_FAIL = "#dc3545"  # Theme-Rot (Bootstrap Danger)
+    # Werte aus Entry-Feldern zurück in DataFrame schreiben
+    for idx, entry in entry_dict.items():
+        df_global.at[int(idx), "Dein Wert"] = entry.get()
     for idx, (_, row) in enumerate(df_global.iterrows()):
         try:
             ref_str = str(row['Referenzwert'])
@@ -227,8 +239,9 @@ def pruefe_werte():
             entry = entry_dict.get(str(idx))
             if entry:
                 entry.config(bg=COLOR_FAIL)
-    messagebox.showinfo("Prüfungsergebnisse", "\n".join(ergebnisse))
-
+    # Schreibe die Ergebnisse in die Spalte "Prüfung"
+    df_global["Prüfung"] = ergebnisse
+    zeige_tabelle()
 
 filter_ordner = Path.home() / "Dokumente" / "Ernaehrung" / "Gesunde Ernährung" / "Filter"
 tabellen = [f.name for f in filter_ordner.glob("*.xlsx") if f.is_file()]
