@@ -42,116 +42,44 @@ def clear_output():
 		btn_sum.pack(side='left', padx=(0, 10))
 from tkinter import filedialog
 def speichere_ergebnisse():
-	# Gehe alle Auswahl-Frames durch und sammle die Ergebnisse
-	alle_ergebnisse = []
-	for frame in auswahl_frames:
-		children = frame.winfo_children()
-		combo = None
-		menge_entry = None
-		# Finde das Dropdown (tb.Combobox) und das Mengenfeld (tb.Entry) im Frame
-		for child in children:
-			if isinstance(child, tb.Combobox):
-				combo = child
-			if isinstance(child, tb.Entry):
-				menge_entry = child
-		if combo is None or menge_entry is None:
-			continue
-		auswahl = combo.get()
-		menge_str = menge_entry.get()
-		try:
-			menge = float(menge_str.replace(',', '.'))
-			if menge <= 0:
-				continue
-		except Exception:
-			continue
-		if not auswahl:
-			continue
-		# Filtere die Zeile für das gewählte Lebensmittel
-		zeile = df[df['Lebensmittel'] == auswahl]
-		if zeile.empty:
-			continue
-		spalten = df.columns[2:]
-		werte_liste = []
-		# Sammle alle Nährstoffwerte
-		for spalte in spalten:
-			wert = zeile.iloc[0][spalte]
-			if pd.notna(wert):
-				try:
-					if isinstance(wert, (int, float)) and not isinstance(wert, bool):
-						werte_liste.append((spalte, float(wert)))
-					else:
-						float_wert = float(str(wert).replace(',', '.'))
-						werte_liste.append((spalte, float_wert))
-				except (ValueError, TypeError):
-					continue
-		if not werte_liste:
-			continue
-		# Nur Werte direkt aus der Tabelle übernehmen, keine Dopplungs-Filterung
-		ergebnis_liste = []
-		for spalte, wert in werte_liste:
-			berechnet = wert / 100 * menge
-			ergebnis_liste.append(f"{spalte}: {berechnet:.2f}")
-		if ergebnis_liste:
-			alle_ergebnisse.append(f"{auswahl} ({menge}g):\n" + '\\n'.join(ergebnis_liste) + '\n')
-	if not alle_ergebnisse:
-		messagebox.showinfo('Hinweis', 'Keine berechneten Werte zum Speichern.')
-		return
-	# Summen wie im Summen-Button berechnen
-	# Wir sammeln alle Zeilen aus alle_ergebnisse, die wie eine Nährstoffzeile aussehen
-	import re
-	summen = {}
-	for block in alle_ergebnisse:
-		for line in block.splitlines():
-			match = re.match(r'^(\w[\w\s\-]*)[:]?\s+([\d\.,]+)$', line)
-			if match:
-				name = match.group(1).strip()
-				try:
-					wert = float(match.group(2).replace(',', '.'))
-					if name in summen:
-						summen[name] += wert
-					else:
-						summen[name] = wert
-				except ValueError:
-					continue
-	# Erstelle einen Dateinamen, der die gewählten Lebensmittel enthält
-	lebensmittel_namen = []
-	for frame in auswahl_frames:
-		children = frame.winfo_children()
-		for child in children:
-			if isinstance(child, tb.Combobox):
-				name = child.get()
-				if name and name not in lebensmittel_namen:
-					lebensmittel_namen.append(name)
-	# Nur die ersten 3 Namen für den Dateinamen verwenden, um ihn nicht zu lang zu machen
-	lebensmittel_kurz = lebensmittel_namen[:3]
-	lebensmittel_str = "_".join([n.replace(" ", "_") for n in lebensmittel_kurz])
-	if lebensmittel_str:
-		default_filename = f"Naehrwerte_Auswahl_{lebensmittel_str}.txt"
-	else:
-		default_filename = "Naehrwerte_Auswahl.txt"
-	save_path = filedialog.asksaveasfilename(
-		defaultextension='.txt',
-		filetypes=[('Textdateien', '*.txt'), ('Alle Dateien', '*.*')],
-		initialfile=default_filename,
-		title='Speicherort für Ergebnisse wählen'
-	)
-	if not save_path:
-		return
-	try:
-		with open(save_path, 'w', encoding='utf-8') as f:
-			for block in alle_ergebnisse:
-				f.write(block + '\n')
-			# Summen anhängen, falls vorhanden
-			if summen:
-				f.write('\n--- Summen aller Nährstoffe ---\n')
-				max_name = max(len(n) for n in summen.keys())
-				max_wert = max(len(f"{v:.2f}") for v in summen.values())
-				for name, wert in summen.items():
-					f.write(f"{name.ljust(max_name)}   {str(f'{wert:.2f}').rjust(max_wert)}\n")
-		messagebox.showinfo('Gespeichert', f'Ergebnisse gespeichert unter:\n{save_path}')
-	except Exception as e:
-		messagebox.showerror('Fehler', f'Fehler beim Speichern:\n{e}')
+    # Hole den aktuellen Inhalt des Ausgabefelds
+    textfeld.config(state='normal')
+    inhalt = textfeld.get('1.0', tk.END).strip()
+    textfeld.config(state='disabled')
+    if not inhalt:
+        messagebox.showinfo('Hinweis', 'Keine Ausgabedaten zum Speichern.')
+        return
 
+    # Erstelle einen Dateinamen, der die gewählten Lebensmittel enthält
+    lebensmittel_namen = []
+    for frame in auswahl_frames:
+        children = frame.winfo_children()
+        for child in children:
+            if isinstance(child, tb.Combobox):
+                name = child.get()
+                if name and name not in lebensmittel_namen:
+                    lebensmittel_namen.append(name)
+    lebensmittel_kurz = lebensmittel_namen[:3]
+    lebensmittel_str = "_".join([n.replace(" ", "_") for n in lebensmittel_kurz])
+    if lebensmittel_str:
+        default_filename = f"Naehrwerte_Ausgabe_{lebensmittel_str}.txt"
+    else:
+        default_filename = "Naehrwerte_Ausgabe.txt"
+
+    save_path = filedialog.asksaveasfilename(
+        defaultextension='.txt',
+        filetypes=[('Textdateien', '*.txt'), ('Alle Dateien', '*.*')],
+        initialfile=default_filename,
+        title='Speicherort für Ergebnisse wählen'
+    )
+    if not save_path:
+        return
+    try:
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(inhalt + '\n')
+        messagebox.showinfo('Gespeichert', f'Ergebnisse gespeichert unter:\n{save_path}')
+    except Exception as e:
+        messagebox.showerror('Fehler', f'Fehler beim Speichern:\n{e}')
 
 
 import pandas as pd
@@ -236,7 +164,7 @@ if fullscreen:
 		root.overrideredirect(True)  # Entfernt die Fensterleiste im Vollbildmodus
 		# Remove menu only if it exists
 		try:
-			root.config(menu=None)
+			root.config(menu=tk.Menu(root))
 		except Exception:
 			pass
 root.lift()
@@ -302,9 +230,9 @@ add_auswahl_frame(first=True)
 textfeld = tk.Text(root, width=80, height=20, state='disabled', wrap='word')
 textfeld.pack(padx=10, pady=10, fill='both', expand=True)
 
-# --- Buttons unterhalb der Auswahl ---
+# --- Buttons ganz unten nebeneinander ---
 frame_buttons_unten = tb.Frame(root)
-frame_buttons_unten.pack(padx=10, pady=5, fill='x')
+frame_buttons_unten.pack(side='bottom', fill='x', padx=10, pady=10)
 
 btn_save = tb.Button(frame_buttons_unten, text='Ergebnisse speichern', command=speichere_ergebnisse)
 btn_save.pack(side='left', padx=(0, 10))
@@ -313,10 +241,30 @@ btn_clear.pack(side='left', padx=(0, 10))
 
 def sum_button_action():
     addiere_werte_in_ausgabe()
-    btn_sum.pack_forget()  # Button ausblenden
+    btn_sum.pack_forget()
 
 btn_sum = tb.Button(frame_buttons_unten, text='Summen berechnen', command=sum_button_action)
 btn_sum.pack(side='left', padx=(0, 10))
+
+# --- Hauptmenü-Button ---
+def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
+	if win32gui is None:
+		# On Linux/Mac, just pass (no window focus possible)
+		return
+	def enumHandler(hwnd, lParam):
+		if win32gui is not None and win32con is not None and win32gui.IsWindowVisible(hwnd):
+			if window_title in win32gui.GetWindowText(hwnd):
+				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+				win32gui.SetForegroundWindow(hwnd)
+	if win32gui is not None and win32con is not None:
+		win32gui.EnumWindows(enumHandler, None)
+
+def zurueck_zum_hauptmenue():
+    bring_hauptmenue_to_front()
+    root.destroy()
+
+btn_hauptmenue = tb.Button(frame_buttons_unten, text='Verlassen', command=zurueck_zum_hauptmenue)
+btn_hauptmenue.pack(side='right', padx=(0, 10))
 
 
 # --- Menüleiste nur anzeigen, wenn nicht fullscreen ---
@@ -358,22 +306,17 @@ def bring_hauptmenue_to_front(window_title='MeinErnaehrungsHauptmenue2025'):
 		# On Linux/Mac, just pass (no window focus possible)
 		return
 	def enumHandler(hwnd, lParam):
-		if win32gui.IsWindowVisible(hwnd):
+		if win32gui is not None and win32con is not None and win32gui.IsWindowVisible(hwnd):
 			if window_title in win32gui.GetWindowText(hwnd):
 				win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
 				win32gui.SetForegroundWindow(hwnd)
-	win32gui.EnumWindows(enumHandler, None)
+	if win32gui is not None and win32con is not None:
+		win32gui.EnumWindows(enumHandler, None)
 
 def zurueck_zum_hauptmenue():
     # Hauptmenü-Fenster wiederherstellen und in den Vordergrund bringen (ohne PowerShell, mit pywin32)
     bring_hauptmenue_to_front()
     root.destroy()
-
-# Hauptmenü-Button unten rechts
-frame_hauptmenue = tb.Frame(root)
-frame_hauptmenue.pack(side='bottom', anchor='se', padx=10, pady=10, fill='x')
-btn_hauptmenue = tb.Button(frame_hauptmenue, text='Verlassen', command=zurueck_zum_hauptmenue)
-btn_hauptmenue.pack(anchor='e', side='right')
 
 def zeige_naehrstoffe(combo, menge_var):
 	lebensmittel = combo.get()
