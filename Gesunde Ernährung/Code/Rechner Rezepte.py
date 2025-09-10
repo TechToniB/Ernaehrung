@@ -91,7 +91,7 @@ entry_var.trace_add('write', lambda *args: filter_rezepte())
 # Zutatenliste mit Scrollbar
 zutaten_canvas = tk.Canvas(root)
 zutaten_canvas.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
-scrollbar_zutaten = tk.Scrollbar(root, orient="vertical", command=zutaten_canvas.yview)
+scrollbar_zutaten = tb.Scrollbar(root, orient="vertical", command=zutaten_canvas.yview)
 scrollbar_zutaten.grid(row=1, column=3, sticky="ns")
 zutaten_canvas.configure(yscrollcommand=scrollbar_zutaten.set)
 frame_zutaten = tk.Frame(zutaten_canvas)

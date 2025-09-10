@@ -189,8 +189,15 @@ canvas_auswahl.create_window((0, 0), window=auswahl_container, anchor='nw')
 
 auswahl_frames = []
 
+def update_canvas_height():
+    # Höhe pro Feld (z.B. 36 Pixel, ggf. anpassen)
+    hoehe_pro_feld = 36
+    anzahl = max(1, min(5, len(auswahl_frames)))
+    canvas_auswahl.config(height=anzahl * hoehe_pro_feld)
+
 def update_scrollregion(event=None):
     canvas_auswahl.configure(scrollregion=canvas_auswahl.bbox("all"))
+    update_canvas_height()
 
 def on_mousewheel(event):
     canvas_auswahl.yview_scroll(int(-1*(event.delta/120)), "units")
