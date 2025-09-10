@@ -81,7 +81,7 @@ def main():
     dark_themes = {"darkly", "cyborg", "superhero", "solar", "vapor"}
     btn_style = "darkly.TButton" if themename in dark_themes else "TButton"
 
-    label = tb.Label(root, text="Bitte wählen Sie eine Funktion:", font=("Arial", 14))
+    label = tb.Label(root, text="Nahrungsrechner", font=("Arial", 20))
     if fullscreen:
         label.pack(side='top', pady=40)
     else:
@@ -97,10 +97,13 @@ def main():
             settings_win.overrideredirect(True)
         win_w, win_h = 400, 250
         settings_win.update_idletasks()
-        screen_w = settings_win.winfo_screenwidth()
-        screen_h = settings_win.winfo_screenheight()
-        x = (screen_w // 2) - (win_w // 2)
-        y = (screen_h // 2) - (win_h // 2)
+        # Positioniere relativ zum Hauptfenster (root)
+        root_x = root.winfo_rootx()
+        root_y = root.winfo_rooty()
+        root_w = root.winfo_width()
+        root_h = root.winfo_height()
+        x = root_x + (root_w // 2) - (win_w // 2)
+        y = root_y + (root_h // 2) - (win_h // 2)
         settings_win.geometry(f"{win_w}x{win_h}+{x}+{y}")
         settings_win.resizable(False, False)
         settings_win.grab_set()
