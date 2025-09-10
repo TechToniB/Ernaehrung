@@ -173,23 +173,41 @@ root.focus_force()
 
 # --- Hauptfenster --- (ab hier ersetzen!)
 
-# --- Dynamische Auswahlfelder in eigenem Container ---
+# --- Dynamische Auswahlfelder mit Scrollbar ---
+frame_auswahl_scroll = tb.Frame(root)
+frame_auswahl_scroll.pack(padx=10, pady=(10, 0), fill='x')
+
+canvas_auswahl = tk.Canvas(frame_auswahl_scroll, height=180)
+canvas_auswahl.pack(side='left', fill='both', expand=True)
+
+scrollbar_auswahl = tb.Scrollbar(frame_auswahl_scroll, orient='vertical', command=canvas_auswahl.yview)
+scrollbar_auswahl.pack(side='right', fill='y')
+canvas_auswahl.configure(yscrollcommand=scrollbar_auswahl.set)
+
+auswahl_container = tb.Frame(canvas_auswahl)
+canvas_auswahl.create_window((0, 0), window=auswahl_container, anchor='nw')
+
 auswahl_frames = []
-auswahl_container = tb.Frame(root)
-auswahl_container.pack(padx=10, pady=(10, 0), fill='x')
+
+def update_scrollregion(event=None):
+    canvas_auswahl.configure(scrollregion=canvas_auswahl.bbox("all"))
+
+def on_mousewheel(event):
+    canvas_auswahl.yview_scroll(int(-1*(event.delta/120)), "units")
+
+auswahl_container.bind("<Configure>", update_scrollregion)
+canvas_auswahl.bind_all("<MouseWheel>", on_mousewheel)  # Windows & Linux
 
 def add_auswahl_frame(first=False):
     frame = tb.Frame(auswahl_container)
     frame.pack(padx=0, pady=2, fill='x')
     auswahl_frames.append(frame)
 
-    # Dropdown für Lebensmittel mit Suchfunktion (dynamische Filterung)
     tb.Label(frame, text='Lebensmittel auswählen:').pack(side='left', padx=(0,5))
     combo_var = tk.StringVar()
     combo = tb.Combobox(frame, textvariable=combo_var, values=lebensmittel_liste, width=40)
     combo.pack(side='left', padx=(0,5))
 
-    # Dynamische Filterung beim Tippen
     def on_keyrelease(event):
         value = combo_var.get().lower()
         if value == '':
@@ -199,32 +217,31 @@ def add_auswahl_frame(first=False):
             combo['values'] = filtered
     combo.bind('<KeyRelease>', on_keyrelease)
 
-    # Eingabefeld für Menge
     tb.Label(frame, text='Menge (g):').pack(side='left', padx=(0,5))
     menge_var = tk.StringVar(value='100')
     menge_entry = tb.Entry(frame, textvariable=menge_var, width=8)
     menge_entry.pack(side='left')
 
-    # Button für diese Auswahl
     btn = tb.Button(frame, text='Nährstoffe anzeigen', command=lambda: zeige_naehrstoffe(combo, menge_var))
     btn.pack(side='left', padx=(10,0))
 
-    # + Button jetzt rechts neben "Nährstoffe anzeigen"
     if first:
         btn_add = tb.Button(frame, text='+', width=2, command=add_auswahl_frame)
         btn_add.pack(side='left', padx=(10,0))
 
-    # Entfernen-Button für weitere Auswahlfelder
     if len(auswahl_frames) > 1:
         btn_remove = tb.Button(frame, text='–', width=2, command=lambda: remove_auswahl_frame(frame))
         btn_remove.pack(side='left', padx=(5,0))
 
+    update_scrollregion()
+
 def remove_auswahl_frame(frame):
     frame.destroy()
     auswahl_frames.remove(frame)
+    update_scrollregion()
 
-# Nur das erste Auswahlfeld wird initial hinzugefügt
 add_auswahl_frame(first=True)
+auswahl_container.bind("<Configure>", update_scrollregion)
 
 # --- Textfeld für die Ausgabe ---
 textfeld = tk.Text(root, width=80, height=20, state='disabled', wrap='word')
